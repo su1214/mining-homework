@@ -14,6 +14,11 @@ library(mosaic)
 library(ggmap)
 library(airportr)
 library(ggplot2)
+library(rsample)
+library(caret)
+library(modelr)
+library(parallel)
+library(foreach)
 ```
 
 #1) Data visualization: flights at ABIA
@@ -43,8 +48,8 @@ c = c[2:54]
 
 df_unique_airports = data.frame(all_unique_airports,count = array(unlist(c)), lat, long)
 
-mp <- openmap(c(53.38332836757155,-130.517578125),
-              c(15.792253570362446,-67.939453125),4,'stamen-watercolor')
+#mp <- openmap(c(53.38332836757155,-130.517578125),
+#              c(15.792253570362446,-67.939453125),4,'stamen-watercolor')
 
 map = get_map("usa", zoom=4)
 
@@ -55,8 +60,173 @@ mapPointsLegendDA
 
 
 #2) Wrangling the Billboard Top 100
+```{r, echo=FALSE}
+billboard = read_csv('billboard.csv')
+
+billboard1 = billboard %>% 
+  filter(year >= 1958) %>%
+  group_by(song_id, song, performer) %>%
+  summarize(count = n(), .groups = 'drop') %>%
+  arrange(desc(count)) %>% head(10)  %>% select(song, performer, count)
+
+billboard3 = c()
+
+for (i in 1959:2020){
+  billboard2 = billboard %>%
+    filter(year == i) %>%
+    group_by(song_id)
+    billboard3[i-1958] = nrow(distinct(billboard2, song_id))
+}
+
+years = seq(1959, 2020, by=1)
+
+df = data.frame(years = years, unique_songs = billboard3)
+
+ggplot(df) + geom_line(aes(x=years, y=unique_songs))
+
+billboard4 = billboard %>%
+  group_by(song_id, performer) %>%
+  summarize(count = n(), .groups='drop') %>%
+  filter(count >= 10) %>%
+  group_by(performer) %>%
+  summarize(count = n()) %>%
+  filter(count >= 30)
+
+ggplot(billboard4) + 
+  geom_col(aes(x=performer, y=count)) +
+  coord_flip()
+```
+
 
 #3) Wrangling the Olympics
+```{r, echo=FALSE}
+olympics = read_csv('../ECO395M/data/olympics_top20.csv')
+
+olympics_female = olympics %>%
+  filter(sex == 'F') %>%
+  filter(sport == 'Athletics') %>%
+  summarize(q95_temp = quantile(height, 0.95))
+
+olympics2 = olympics %>%
+  filter(sex == 'F') %>%
+  group_by(event) %>%
+  summarize(sd_height = sd(height, na.rm=TRUE))%>%
+  filter(sd_height != 'NA')
+
+max(olympics2$sd_height)
+
+olympics3 = olympics %>%
+  filter(sport == 'Swimming') %>%
+  group_by(year) %>%
+  summarize(mean_age = mean(age))
+
+ggplot(olympics3) +
+  geom_line(aes(x=year, y=mean_age))
+
+olympics4 = olympics %>%
+  filter(sport == 'Swimming') %>%
+  group_by(year, sex) %>%
+  summarize(mean_age = mean(age))
+
+ggplot(olympics4) +
+  geom_line(aes(x=year, y=mean_age)) +
+  facet_wrap(~sex)
+```
 
 #4) K-nearest neighbors
+##350
+```{r, echo=FALSE}
+cars = read_csv('sclass.csv')
+
+cars_350 = cars %>% filter(trim == '350')
+
+summary(cars_350)
+
+# plot the data
+ggplot(data = cars_350) + 
+  geom_point(mapping = aes(x = mileage, y = price), color='darkgrey')
+
+# test train split
+cars_350_split =  initial_split(cars_350, prop=0.9)
+cars_350_train = training(cars_350_split)
+cars_350_test  = testing(cars_350_split)
+
+k_grid = c(2, 4, 6, 8, 10, 15, 20, 25, 30, 35, 40, 45,
+           50, 60, 70, 80, 90, 100, 125, 150, 175, 200, 250, 300)
+
+k_grid = seq(2,200, by=1)
+
+cv_grid = foreach(k = k_grid, .combine='rbind') %dopar% {
+  knn = knnreg(price ~ mileage, data=cars_350_train, k=k)
+  rms = rmse(knn, cars_350_test)
+  c(k=k, err=rms)
+} %>% as.data.frame
+
+head(cv_grid)
+
+ggplot(cv_grid) + 
+  geom_point(aes(x=k, y=err)) + 
+  scale_x_log10()
+
+cv_grid_final = cv_grid %>% filter(err == min(cv_grid$err))
+cv_grid_final$k
+
+knn = knnreg(price ~ mileage, data=cars_350_train, k=cv_grid_final$k)
+
+cars_350_test = cars_350_test %>%
+  mutate(price_pred = predict(knn, cars_350_test))
+
+p_test = ggplot(data = cars_350_test) + 
+  geom_point(mapping = aes(x = mileage, y = price), alpha=0.2)
+p_test
+
+# now add the predictions
+p_test + geom_line(aes(x = mileage, y = price_pred), color='red', size=1.5)
+```
+
+##65 AMG
+```{r, echo=FALSE}
+cars_63AMG = cars %>% filter(trim == '63 AMG')
+
+summary(cars_63AMG)
+
+# plot the data
+ggplot(data = cars_63AMG) + 
+  geom_point(mapping = aes(x = mileage, y = price), color='darkgrey')
+
+# test train split
+cars_63AMG_split =  initial_split(cars_63AMG, prop=0.9)
+cars_63AMG_train = training(cars_63AMG_split)
+cars_63AMG_test  = testing(cars_63AMG_split)
+
+k_grid = c(2, 4, 6, 8, 10, 15, 20, 25, 30, 35, 40, 45,
+           50, 60, 70, 80, 90, 100, 125, 150, 175, 200, 250, 300)
+
+cv_grid = foreach(k = k_grid, .combine='rbind') %dopar% {
+  knn = knnreg(price ~ mileage, data=cars_63AMG_train, k=k)
+  rms = rmse(knn, cars_63AMG_test)
+  c(k=k, err=rms)
+} %>% as.data.frame
+
+head(cv_grid)
+
+ggplot(cv_grid) + 
+  geom_point(aes(x=k, y=err)) + 
+  scale_x_log10()
+
+cv_grid_final = cv_grid %>% filter(err == min(cv_grid$err))
+cv_grid_final$k
+
+knn = knnreg(price ~ mileage, data=cars_63AMG_train, k=cv_grid_final$k)
+
+cars_63AMG_test = cars_63AMG_test %>%
+  mutate(price_pred = predict(knn, cars_63AMG_test))
+
+p_test = ggplot(data = cars_63AMG_test) + 
+  geom_point(mapping = aes(x = mileage, y = price), alpha=0.2)
+p_test
+
+# now add the predictions
+p_test + geom_line(aes(x = mileage, y = price_pred), color='red', size=1.5)
+```
 
