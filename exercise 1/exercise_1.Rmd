@@ -8,7 +8,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 library(tidyverse)
 library(mosaic)
 library(ggmap)
@@ -21,7 +21,7 @@ library(parallel)
 library(foreach)
 ```
 
-#1) Data visualization: flights at ABIA
+# 1) Data visualization: flights at ABIA
 
 ```{r, echo = FALSE}
 airport = read_csv('ABIA.csv')
@@ -59,7 +59,7 @@ mapPointsLegendDA
 ```
 
 
-#2) Wrangling the Billboard Top 100
+# 2) Wrangling the Billboard Top 100
 ```{r, echo=FALSE}
 billboard = read_csv('billboard.csv')
 
@@ -98,7 +98,7 @@ ggplot(billboard4) +
 ```
 
 
-#3) Wrangling the Olympics
+# 3) Wrangling the Olympics
 ```{r, echo=FALSE}
 olympics = read_csv('olympics_top20.csv')
 
@@ -133,8 +133,8 @@ ggplot(olympics4) +
   facet_wrap(~sex)
 ```
 
-#4) K-nearest neighbors
-##350
+# 4) K-nearest neighbors
+## 350
 ```{r, echo=FALSE}
 cars = read_csv('sclass.csv')
 
@@ -184,7 +184,7 @@ p_test
 p_test + geom_line(aes(x = mileage, y = price_pred), color='red', size=1.5)
 ```
 
-##65 AMG
+## 65 AMG
 ```{r, echo=FALSE}
 cars_63AMG = cars %>% filter(trim == '63 AMG')
 
