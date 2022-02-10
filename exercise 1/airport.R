@@ -3,7 +3,7 @@ library(mosaic)
 library(ggmap)
 library(airportr)
 library(aptheme)
-
+library(ggrepel) 
 airport = read_csv('../ECO395M/data/ABIA.csv')
 
 airport = airport %>% mutate(TotalDelay = ArrDelay+DepDelay)
@@ -29,11 +29,11 @@ c = c[2:54]
 
 df_unique_airports = data.frame(all_unique_airports,count = array(unlist(c)), lat, long)
 
-mp <- openmap(c(53.38332836757155,-130.517578125),
-              c(15.792253570362446,-67.939453125),4,'stamen-watercolor')
-
 map = get_map("usa", zoom=4)
 
-mapPointsDA <- ggmap(map) + geom_point(aes(x = long, y = lat, size = sqrt(count)), data = df_unique_airports, alpha = .5) 
+mapPointsDA <- ggmap(map) + geom_point(aes(x = long, y = lat, size = sqrt(count)), data = df_unique_airports, alpha = .5, color = "52CBF3") 
 mapPointsLegendDA <- mapPointsDA + scale_size_area(breaks = sqrt(c(1, 5, 10, 50, 100, 500)), labels = c(1, 5, 10, 50, 100, 500))
-mapPointsLegendDA
+map_final <- mapPointsLegendDA + geom_label_repel(data = df_unique_airports %>% arrange(desc(count)) %>% head(5), nudge_x = 0.002, nudge_y = -0.015,
+                                     aes(x = long, y = lat, label = all_unique_airports))
+map_final
+

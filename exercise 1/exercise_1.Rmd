@@ -19,56 +19,84 @@ library(caret)
 library(modelr)
 library(parallel)
 library(foreach)
+library(ggrepel)
+library(gifski)
+library(gganimate)
 ```
 
 ## 1) Data visualization: flights at ABIA
 
 ```{r, echo = FALSE}
 airport = read_csv('ABIA.csv')
-airport = airport %>% mutate(TotalDelay = ArrDelay+DepDelay)
-  
+
 all_airports_origin = unique(airport$Origin)
 all_airports_dest = unique(airport$Origin)
 
 all_unique_airports = unique(append(all_airports_origin, all_airports_dest))
 
-airpot_from_aus = airport %>%  filter(Origin == 'AUS')
+# airpot_from_aus = airport %>%  filter(Origin == 'AUS')
 airport_to_aus = airport %>% filter(Dest == 'AUS')
-count = c()
-lat = c()
-long = c()
 
-for(i in 1:length(all_unique_airports)){
-    c = append(c, nrow(airport_to_aus %>% filter(Origin == all_unique_airports[i]))[1])
-    lat = append(lat, airport_location(all_unique_airports[i], input_type = 'IATA')$Latitude)
-    long = append(long, airport_location(all_unique_airports[i], input_type = 'IATA')$Longitude)
-}
-
-c = c[2:54]
-
-df_unique_airports = data.frame(all_unique_airports,count = array(unlist(c)), lat, long)
-
-#mp <- openmap(c(53.38332836757155,-130.517578125),
-#              c(15.792253570362446,-67.939453125),4,'stamen-watercolor')
+airports_by_month = airport_to_aus %>% group_by(Origin, Month) %>% summarize(count = n())
+airports_by_month = airports_by_month %>% mutate(Latitude = airport_location(Origin)$Latitude,
+                             Longitude = airport_location(Origin)$Longitude)
+airports_by_month = airports_by_month %>% mutate(Month = month.name[Month])
 
 map = get_map("usa", zoom=4)
 
-mapPointsDA <- ggmap(map) + geom_point(aes(x = long, y = lat, size = sqrt(count)), data = df_unique_airports, alpha = .5) 
-mapPointsLegendDA <- mapPointsDA + scale_size_area(breaks = sqrt(c(1, 5, 10, 50, 100, 500)), labels = c(1, 5, 10, 50, 100, 500))
-mapPointsLegendDA
+map_month <- ggmap(map) + 
+  geom_point(aes(x = Longitude, y = Latitude, size = sqrt(count)), data = airports_by_month, alpha = .4, color = "#ff8aab") + 
+  theme(axis.ticks.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank()) +
+  labs(x = '', y = '', title = "Origins of the Flights to AUS by Month",
+       subtitle = '{closest_state}') +
+  scale_size_area(name   = "Numbers of Flights", 
+                  breaks = sqrt(c(1, 5, 10, 50, 100, 500)), labels = c(1, 5, 10, 50, 100, 500)) +
+  geom_label_repel(data = airports_by_month %>% group_by(Origin, Latitude, Longitude) %>% summarize(count = sum(count)) %>% arrange(desc(count)) %>% head(5), label.padding = 0.1, box.padding = 0.1, label.size = 0.1, nudge_x = 0.002, nudge_y = +1.4, aes(x = Longitude, y = Latitude, label = Origin)) + 
+  transition_states(Month, state_length = 5, transition_length = 3)
+map_month
 ```
 
+```{r, eval=FALSE, include=FALSE}
+airports_by_day = airport_to_aus %>% group_by(Origin, DayOfWeek) %>% summarize(count = n())
+airports_by_day = airports_by_day %>% mutate(Latitude = airport_location(Origin)$Latitude,
+                             Longitude = airport_location(Origin)$Longitude)
+day.name = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+airports_by_day = airports_by_day %>% mutate(day = day.name[DayOfWeek]) %>% arrange(DayOfWeek)
+
+
+map_day <- ggmap(map) + 
+  geom_point(aes(x = Longitude, y = Latitude, size = sqrt(count)), data = airports_by_day, alpha = .4, color = "#ff8aab") + 
+  theme(axis.ticks.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank()) +
+  labs(x = '', y = '', title = "Origins of the Flights to AUS by the Day of Week",
+       subtitle = '{closest_state}') +
+  scale_size_area(name   = "Numbers of Flights", 
+                  breaks = sqrt(c(1, 5, 10, 50, 100, 500)), labels = c(1, 5, 10, 50, 100, 500)) +
+  geom_label_repel(data = airports_by_day %>% group_by(Origin, Latitude, Longitude) %>% summarize(count = sum(count)) %>% arrange(desc(count)) %>% head(5), label.padding = 0.1, box.padding = 0.1, label.size = 0.1, nudge_x = 0.002, nudge_y = +1.4, aes(x = Longitude, y = Latitude, label = Origin)) + 
+  transition_states(day, state_length = 5, transition_length = 3)
+map_day
+```
 
 ## 2) Wrangling the Billboard Top 100
+Part A: Table of the top 10 most popular songs since 1958
 ```{r, echo=FALSE}
 billboard = read_csv('billboard.csv')
 
-billboard1 = billboard %>% 
+billboard_A = billboard %>% 
   filter(year >= 1958) %>%
   group_by(song_id, song, performer) %>%
   summarize(count = n(), .groups = 'drop') %>%
   arrange(desc(count)) %>% head(10)  %>% select(song, performer, count)
+billboard_A
+```
 
+Part B
+```{r, echo = FALSE}
 billboard3 = c()
 
 for (i in 1959:2020){
@@ -80,11 +108,16 @@ for (i in 1959:2020){
 
 years = seq(1959, 2020, by=1)
 
-df = data.frame(years = years, unique_songs = billboard3)
+billboard_4 = data.frame(years = years, unique_songs = billboard3)
 
-ggplot(df) + geom_line(aes(x=years, y=unique_songs))
-
-billboard4 = billboard %>%
+billboard_B = ggplot(billboard_4) + geom_line(aes(x=years, y=unique_songs)) +
+  labs(x = '', y = '', title = "Musical diversity of the Billboard Top 100, 1959-2020",
+       caption = "Musical divserity has been calculated by counting the number of unique songs that appeared in the Billboard Top 100 that year.")
+billboard_B
+```
+Part C
+```{r, echo = FALSE}
+billboard5 = billboard %>%
   group_by(song_id, performer) %>%
   summarize(count = n(), .groups='drop') %>%
   filter(count >= 10) %>%
@@ -92,45 +125,60 @@ billboard4 = billboard %>%
   summarize(count = n()) %>%
   filter(count >= 30)
 
-ggplot(billboard4) + 
-  geom_col(aes(x=performer, y=count)) +
-  coord_flip()
+bilboardC = ggplot(billboard5) + 
+  geom_col(aes(x=fct_reorder(performer, count), y=count), color = 'pink') +
+  coord_flip() +
+  labs(x = '', y = 'Numbers of Ten-Week Hits', title = "Artists with 30 Or More Ten-Week Hits since 1958",
+       caption = "A Ten-Week Hit is achieved when a single song appears on the Billboard Top 100 for at least ten weeks.")
+bilboardC
 ```
 
 
 ## 3) Wrangling the Olympics
-```{r, echo=FALSE}
+A)
+```{r, echo=FALSE, results='hide'}
 olympics = read_csv('olympics_top20.csv')
 
 olympics_female = olympics %>%
   filter(sex == 'F') %>%
   filter(sport == 'Athletics') %>%
   summarize(q95_temp = quantile(height, 0.95))
+```
 
+The 95th percentile of heights for female competitors across all Athletics events is `r as.numeric(olympics_female)`.
+
+B)
+```{r, echo = FALSE}
 olympics2 = olympics %>%
   filter(sex == 'F') %>%
   group_by(event) %>%
-  summarize(sd_height = sd(height, na.rm=TRUE))%>%
-  filter(sd_height != 'NA')
+  summarize(sd_height = sd(height, na.rm=TRUE)) %>%
+  filter(sd_height != 'NA') %>%
+  arrange(desc(sd_height))
+```
 
-max(olympics2$sd_height)
+`r olympics2$event[1]` has had the greatest variability in competitor's heights across the entire history of the Olympics.
 
+C)
+```{r, echo = FALSE}
 olympics3 = olympics %>%
   filter(sport == 'Swimming') %>%
   group_by(year) %>%
   summarize(mean_age = mean(age))
 
-ggplot(olympics3) +
-  geom_line(aes(x=year, y=mean_age))
+olympics3$sex = "all"
 
 olympics4 = olympics %>%
   filter(sport == 'Swimming') %>%
   group_by(year, sex) %>%
-  summarize(mean_age = mean(age))
+  summarize(mean_age = mean(age)) %>% rbind(olympics3) %>% arrange(year)
 
-ggplot(olympics4) +
-  geom_line(aes(x=year, y=mean_age)) +
-  facet_wrap(~sex)
+olympicsC = ggplot(olympics4) +
+  geom_line(aes(x=year, y=mean_age, color = sex)) +
+  labs(x = "", y = "", title = "Average Age of Olympic Swimmers Over Time",
+       caption = "The average age of Olympic Swimmers deceased until 1950, stayed until 1975, and has been increasing since.
+       Male swimmers tend to be older than female swimmers.")
+olympicsC
 ```
 
 ## 4) K-nearest neighbors
@@ -140,93 +188,80 @@ cars = read_csv('sclass.csv')
 
 cars_350 = cars %>% filter(trim == '350')
 
-summary(cars_350)
-
-# plot the data
-ggplot(data = cars_350) + 
-  geom_point(mapping = aes(x = mileage, y = price), color='darkgrey')
-
 # test train split
 cars_350_split =  initial_split(cars_350, prop=0.9)
 cars_350_train = training(cars_350_split)
 cars_350_test  = testing(cars_350_split)
 
-k_grid = c(2, 4, 6, 8, 10, 15, 20, 25, 30, 35, 40, 45,
-           50, 60, 70, 80, 90, 100, 125, 150, 175, 200, 250, 300)
-
 k_grid = seq(2,200, by=1)
 
-cv_grid = foreach(k = k_grid, .combine='rbind') %dopar% {
+cv_grid_350 = foreach(k = k_grid, .combine='rbind') %do% {
   knn = knnreg(price ~ mileage, data=cars_350_train, k=k)
   rms = rmse(knn, cars_350_test)
   c(k=k, err=rms)
 } %>% as.data.frame
 
-head(cv_grid)
-
-ggplot(cv_grid) + 
+ggplot(cv_grid_350) + 
   geom_point(aes(x=k, y=err)) + 
-  scale_x_log10()
+  labs(y = 'RMSE') +
+  scale_x_log10() +
+  labs(title = "RMSE Plot for 350")
 
-cv_grid_final = cv_grid %>% filter(err == min(cv_grid$err))
-cv_grid_final$k
+cv_grid_350_final = cv_grid_350 %>% filter(err == min(cv_grid_350$err))
+```
 
-knn = knnreg(price ~ mileage, data=cars_350_train, k=cv_grid_final$k)
+The optimal value of k in this case is `r cv_grid_350_final$k`.
+
+```{r, echo = FALSE}
+knn_350 = knnreg(price ~ mileage, data=cars_350_train, k=cv_grid_350_final$k)
 
 cars_350_test = cars_350_test %>%
   mutate(price_pred = predict(knn, cars_350_test))
 
-p_test = ggplot(data = cars_350_test) + 
-  geom_point(mapping = aes(x = mileage, y = price), alpha=0.2)
-p_test
-
-# now add the predictions
-p_test + geom_line(aes(x = mileage, y = price_pred), color='red', size=1.5)
+plot_350_pred = ggplot(data = cars_350_test) + 
+  geom_point(mapping = aes(x = mileage, y = price), alpha=0.2) +
+  geom_line(aes(x = mileage, y = price_pred), color='red') +
+  labs(title = "Plot of the Fitted Model for 350")
+plot_350_pred
 ```
 
-### 65 AMG
+### 63 AMG
 ```{r, echo=FALSE}
 cars_63AMG = cars %>% filter(trim == '63 AMG')
-
-summary(cars_63AMG)
-
-# plot the data
-ggplot(data = cars_63AMG) + 
-  geom_point(mapping = aes(x = mileage, y = price), color='darkgrey')
 
 # test train split
 cars_63AMG_split =  initial_split(cars_63AMG, prop=0.9)
 cars_63AMG_train = training(cars_63AMG_split)
 cars_63AMG_test  = testing(cars_63AMG_split)
 
-k_grid = c(2, 4, 6, 8, 10, 15, 20, 25, 30, 35, 40, 45,
-           50, 60, 70, 80, 90, 100, 125, 150, 175, 200, 250, 300)
-
-cv_grid = foreach(k = k_grid, .combine='rbind') %dopar% {
+cv_grid_63AMG = foreach(k = k_grid, .combine='rbind') %do% {
   knn = knnreg(price ~ mileage, data=cars_63AMG_train, k=k)
   rms = rmse(knn, cars_63AMG_test)
   c(k=k, err=rms)
 } %>% as.data.frame
 
-head(cv_grid)
-
-ggplot(cv_grid) + 
+ggplot(cv_grid_63AMG) + 
   geom_point(aes(x=k, y=err)) + 
-  scale_x_log10()
+  labs(y = 'RMSE') +
+  scale_x_log10() +
+  labs(title = "RMSE Plot for 63AMG")
 
-cv_grid_final = cv_grid %>% filter(err == min(cv_grid$err))
-cv_grid_final$k
+cv_grid_63AMG_final = cv_grid_63AMG %>% filter(err == min(cv_grid_63AMG$err))
+```
 
-knn = knnreg(price ~ mileage, data=cars_63AMG_train, k=cv_grid_final$k)
+The optimal value of k in this case is `r cv_grid_63AMG_final$k`.
+
+```{r, echo = FALSE}
+knn = knnreg(price ~ mileage, data=cars_63AMG_train, k=cv_grid_63AMG_final$k)
 
 cars_63AMG_test = cars_63AMG_test %>%
   mutate(price_pred = predict(knn, cars_63AMG_test))
 
-p_test = ggplot(data = cars_63AMG_test) + 
-  geom_point(mapping = aes(x = mileage, y = price), alpha=0.2)
-p_test
-
-# now add the predictions
-p_test + geom_line(aes(x = mileage, y = price_pred), color='red', size=1.5)
+plot_63AMG_pred = ggplot(data = cars_63AMG_test) + 
+  geom_point(mapping = aes(x = mileage, y = price), alpha=0.2) +
+  geom_line(aes(x = mileage, y = price_pred), color='red') +
+  labs(title = "Plot of the Fitted Model for 63AMG")
+plot_63AMG_pred
 ```
 
+63 AMG yields a larger optimal value of K, 26 compared to 8 for 350. I suspect that it might be because there are a lot of 63AMGs with very low mileage.
