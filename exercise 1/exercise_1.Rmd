@@ -100,7 +100,7 @@ ggplot(billboard4) +
 
 #3) Wrangling the Olympics
 ```{r, echo=FALSE}
-olympics = read_csv('../ECO395M/data/olympics_top20.csv')
+olympics = read_csv('olympics_top20.csv')
 
 olympics_female = olympics %>%
   filter(sex == 'F') %>%
