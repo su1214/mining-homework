@@ -84,7 +84,9 @@ map_day
 ```
 
 ## 2) Wrangling the Billboard Top 100
+
 Part A: Table of the top 10 most popular songs since 1958
+
 ```{r, echo=FALSE}
 billboard = read_csv('billboard.csv')
 
@@ -93,10 +95,12 @@ billboard_A = billboard %>%
   group_by(song_id, song, performer) %>%
   summarize(count = n(), .groups = 'drop') %>%
   arrange(desc(count)) %>% head(10)  %>% select(song, performer, count)
+colnames(billboard_A) = c("Song", "Performer", "Count")
 kable(billboard_A)
 ```
 
 Part B: Musical Diversity in Billboard Top 100
+
 ```{r, echo = FALSE}
 billboard3 = c()
 
@@ -118,6 +122,7 @@ billboard_B
 ```
 
 Part C: 30 Ten-Week Hits or more
+
 ```{r, echo = FALSE}
 billboard5 = billboard %>%
   group_by(song_id, performer) %>%
@@ -189,6 +194,7 @@ olympicsC
 
 ## 4) K-nearest neighbors
 ### 350
+
 ```{r, echo=FALSE}
 cars = read_csv('sclass.csv')
 
@@ -232,6 +238,7 @@ plot_350_pred
 ```
 
 ### 63 AMG
+
 ```{r, echo=FALSE}
 cars_63AMG = cars %>% filter(trim == '63 AMG')
 

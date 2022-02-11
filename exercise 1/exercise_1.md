@@ -6,7 +6,7 @@
 
 Part A: Table of the top 10 most popular songs since 1958
 
-| song                                | performer                                 | count |
+| Song                                | Performer                                 | Count |
 |:------------------------------------|:------------------------------------------|------:|
 | Radioactive                         | Imagine Dragons                           |    87 |
 | Sail                                | AWOLNATION                                |    79 |
@@ -20,9 +20,11 @@ Part A: Table of the top 10 most popular songs since 1958
 | Before He Cheats                    | Carrie Underwood                          |    64 |
 
 Part B: Musical Diversity in Billboard Top 100
+
 ![](exercise_1_files/figure-markdown_github/unnamed-chunk-4-1.png)
 
 Part C: 30 Ten-Week Hits or more
+
 ![](exercise_1_files/figure-markdown_github/unnamed-chunk-5-1.png)
 
 ## 3) Wrangling the Olympics
@@ -47,7 +49,7 @@ Part C
 
 ![](exercise_1_files/figure-markdown_github/unnamed-chunk-9-1.png)
 
-The optimal value of k in this case is 86.
+The optimal value of k in this case is 68.
 
 ![](exercise_1_files/figure-markdown_github/unnamed-chunk-10-1.png)
 
@@ -55,7 +57,7 @@ The optimal value of k in this case is 86.
 
 ![](exercise_1_files/figure-markdown_github/unnamed-chunk-11-1.png)
 
-The optimal value of k in this case is 83.
+The optimal value of k in this case is 106.
 
 ![](exercise_1_files/figure-markdown_github/unnamed-chunk-12-1.png)
 
