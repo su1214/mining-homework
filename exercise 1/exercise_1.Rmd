@@ -95,7 +95,7 @@ billboard_A = billboard %>%
 billboard_A
 ```
 
-Part B
+Part B: Musical Diversity in Billboard Top 100
 ```{r, echo = FALSE}
 billboard3 = c()
 
@@ -115,7 +115,8 @@ billboard_B = ggplot(billboard_4) + geom_line(aes(x=years, y=unique_songs)) +
        caption = "Musical divserity has been calculated by counting the number of unique songs that appeared in the Billboard Top 100 that year.")
 billboard_B
 ```
-Part C
+
+Part C: 30 Ten-Week Hits or more
 ```{r, echo = FALSE}
 billboard5 = billboard %>%
   group_by(song_id, performer) %>%
@@ -135,7 +136,9 @@ bilboardC
 
 
 ## 3) Wrangling the Olympics
-A)
+
+part A
+
 ```{r, echo=FALSE, results='hide'}
 olympics = read_csv('olympics_top20.csv')
 
@@ -147,7 +150,8 @@ olympics_female = olympics %>%
 
 The 95th percentile of heights for female competitors across all Athletics events is `r as.numeric(olympics_female)`.
 
-B)
+part B
+
 ```{r, echo = FALSE}
 olympics2 = olympics %>%
   filter(sex == 'F') %>%
@@ -159,7 +163,8 @@ olympics2 = olympics %>%
 
 `r olympics2$event[1]` has had the greatest variability in competitor's heights across the entire history of the Olympics.
 
-C)
+Part C
+
 ```{r, echo = FALSE}
 olympics3 = olympics %>%
   filter(sport == 'Swimming') %>%
@@ -264,4 +269,4 @@ plot_63AMG_pred = ggplot(data = cars_63AMG_test) +
 plot_63AMG_pred
 ```
 
-63 AMG yields a larger optimal value of K, 26 compared to 8 for 350. I suspect that it might be because there are a lot of 63AMGs with very low mileage.
+63 AMG yields a larger optimal value of k. I suspect that it might be because there are a lot of 63AMGs with very low mileage.
