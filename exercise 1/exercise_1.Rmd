@@ -22,6 +22,7 @@ library(foreach)
 library(ggrepel)
 library(gifski)
 library(gganimate)
+library(knitr)
 ```
 
 ## 1) Data visualization: flights at ABIA
@@ -40,7 +41,7 @@ airport_to_aus = airport %>% filter(Dest == 'AUS')
 airports_by_month = airport_to_aus %>% group_by(Origin, Month) %>% summarize(count = n())
 airports_by_month = airports_by_month %>% mutate(Latitude = airport_location(Origin)$Latitude,
                              Longitude = airport_location(Origin)$Longitude)
-airports_by_month = airports_by_month %>% mutate(Month = month.name[Month])
+airports_by_month = airports_by_month %>% mutate(Month = factor(month.name[Month], levels = month.name))
 
 map = get_map("usa", zoom=4)
 
@@ -55,7 +56,7 @@ map_month <- ggmap(map) +
   scale_size_area(name   = "Numbers of Flights", 
                   breaks = sqrt(c(1, 5, 10, 50, 100, 500)), labels = c(1, 5, 10, 50, 100, 500)) +
   geom_label_repel(data = airports_by_month %>% group_by(Origin, Latitude, Longitude) %>% summarize(count = sum(count)) %>% arrange(desc(count)) %>% head(5), label.padding = 0.1, box.padding = 0.1, label.size = 0.1, nudge_x = 0.002, nudge_y = +1.4, aes(x = Longitude, y = Latitude, label = Origin)) + 
-  transition_states(Month, state_length = 5, transition_length = 3)
+  transition_states(Month, state_length = 10, transition_length = 7)
 map_month
 ```
 
@@ -92,7 +93,7 @@ billboard_A = billboard %>%
   group_by(song_id, song, performer) %>%
   summarize(count = n(), .groups = 'drop') %>%
   arrange(desc(count)) %>% head(10)  %>% select(song, performer, count)
-billboard_A
+kable(billboard_A)
 ```
 
 Part B: Musical Diversity in Billboard Top 100
@@ -269,4 +270,4 @@ plot_63AMG_pred = ggplot(data = cars_63AMG_test) +
 plot_63AMG_pred
 ```
 
-63 AMG yields a larger optimal value of k. I suspect that it might be because there are a lot of 63AMGs with very low mileage.
+63 AMG yields a larger optimal value of k. I suspect that it might be because there are a lot of 63 AMGs with very low mileage.
