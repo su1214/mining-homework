@@ -1,0 +1,20 @@
+---
+title: "ECO395M: Exercise 1"
+author: "Steven Kim and Shreekara Shastry"
+date: ""
+output:
+  md_document:
+    variant: markdown_github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(rsample)
+library(caret)
+library(modelr)
+library(knitr)
+```
+
+## 1) Data visualization
+
