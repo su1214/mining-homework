@@ -8,13 +8,70 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 library(tidyverse)
 library(rsample)
 library(caret)
 library(modelr)
 library(knitr)
+library(mosaic)
+library(parallel)
+library(foreach)
 ```
 
 ## 1) Data visualization
+
+## 2) Saratoga house prices
+
+```{r}
+data(SaratogaHouses)
+
+K_folds = 5
+
+saratoga_folds = crossv_kfold(SaratogaHouses, k=K_folds)
+
+#linear model
+
+models = map(saratoga_folds$train, ~ lm(price ~ . - pctCollege - sewer - newConstruction + rooms:bathrooms, data = ., use.all=FALSE))
+errs = map2_dbl(models, saratoga_folds$test, modelr::rmse)
+
+
+#knn model
+
+k_grid = c(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 
+           30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200, 250, 300)
+
+cv_grid = foreach(k = k_grid, .combine='rbind') %dopar% {
+  models = map(saratoga_folds$train, ~ knnreg(price ~ . - pctCollege - sewer - newConstruction, k=k, data = ., use.all=FALSE))
+  errs = map2_dbl(models, saratoga_folds$test, modelr::rmse)
+  c(k=k, err = mean(errs), std_err = sd(errs)/sqrt(K_folds))
+} %>% as.data.frame
+
+ggplot(cv_grid) + 
+  geom_point(aes(x=k, y=err)) + 
+  geom_errorbar(aes(x=k, ymin = err-std_err, ymax = err+std_err)) + 
+  scale_x_log10()
+
+cv_grid_final = cv_grid %>% filter(err == min(cv_grid$err))
+rownames(cv_grid_final) = c("KNN Model")
+cv_grid_final = rbind(cv_grid_final, data.frame(k="NA", err = mean(errs), std_err = sd(errs)/sqrt(K_folds),  row.names = c("Linear Model"))) %>% dplyr::select(-std_err)
+kable(cv_grid_final)
+```
+
+choose k = `r cv_grid_final[1,1]`, standard error is smaller for the linear model.
+
+
+## 3) Classification and retrospective sampling
+
+## 4) Children and hotel reservations
+
+```{r}
+hotels_dev = read_csv("hotels_dev.csv")
+hotels_val = read_csv("hotels_val.csv")
+
+# caret::knn3(type ~ RI + Mg, data=fgl_train, k=5)
+
+
+```
+
 
