@@ -20,7 +20,7 @@ library(foreach)
 ```
 
 ## 1) Data visualization
-```{r, echo=FALSE}
+```{r}
 data = read_csv('capmetro_UT.csv')
 
 # Recode the categorical variables in sensible, rather than alphabetical, order
@@ -36,13 +36,15 @@ data_1 = data %>%
 
 ggplot(data_1) +
   geom_line(aes(x=month, y=avg_boarding,color=month)) +
-    labs(x = 'Month', y = 'Average Number of Boardings', color = 'Airport',
+    labs(x = '', y = '', color = 'Month',
        title = 'Average Number of Boardings based on Day of the Week',
-       caption = 'Avg number of boardings is broadly similar on weekdays 
-                  and it dips over the weekend as expected for all three months
-                  hour of peak boarding remains consitent between 3 and 5 pm
-                  since its the common time for the classes to end') +
-  facet_wrap(~day_of_week)
+       caption = 'Average number of boardings is broadly similar on weekdays and it dips over the weekend as expected.
+For all three months, the peak hour of boarding numbers on weekdays remains consitent between 3 and 5 pm probably 
+because the classes usually end around that time.
+The average boardings on Mondays in September are lower most likely because of Labor Day, which is the Monday in the 
+first week of September and those on Wed/Thurs/Fri in November because of the Thanksgiving holidays.') +
+  facet_wrap(~day_of_week, ncol = 5) +
+  theme(plot.caption = element_text(hjust = 0))
 
 data_2 = data %>% 
   group_by(day_of_week, hour_of_day) %>%
@@ -51,17 +53,22 @@ data_2 = data %>%
 
 ```{r}
 ggplot(data) +
-  geom_point(aes(x=temperature, y=boarding, color = weekend=='weekend')) +
-  scale_colour_manual(name = 'Weekend', values = setNames(c('blue','red'),c(T, F))) +
+  geom_point(aes(x=temperature, y=boarding, color = weekend=='weekend'), size = .3) +
+  scale_colour_manual(name = 'Weekend', values = setNames(c('blue','red'), c(T, F))) +
   facet_wrap(~hour_of_day) +
       labs(x = 'Temperature in F', y = 'Boardings', color = 'Weekend',
        title = 'Number of Boardings variation based on the Tempereature',
-       caption = 'Number of boardings is smaller over the weekends 
-       compared to the weekdays as expected across all all values 
-       of temperature and the time of the day except from 6 to 9am,
-       i.e before the college starts')
+       caption = 'Number of boardings is smaller over the weekends compared to the weekdays, as expected, across all 
+values of temperature and the time of the day except from 6 to 9am. It is probably because the classes do 
+not start until 9am on weekdays and student tend not to wake up early on both weekdays and weekends. 
+When we hold hour of day and weekend status constant, temperature does not seem to have a noticeable 
+effect on the number of UT students riding the bus. The dots are distributed fairly consistent over 
+different temperatures') +
+  theme(plot.caption = element_text(hjust = 0))
 ```
+
 ## 2) Saratoga house prices
+
 ```{r}
 data(SaratogaHouses)
 
@@ -91,11 +98,6 @@ cv_grid = foreach(k = k_grid, .combine='rbind') %dopar% {
   c(k=k, err = mean(errs), std_err = sd(errs)/sqrt(K_folds))
 } %>% as.data.frame
 
-ggplot(cv_grid) + 
-  geom_point(aes(x=k, y=err)) + 
-  geom_errorbar(aes(x=k, ymin = err-std_err, ymax = err+std_err)) + 
-  scale_x_log10()
-
 cv_grid_final = cv_grid %>% filter(err == min(cv_grid$err))
 rownames(cv_grid_final) = c("KNN Model")
 cv_grid_final = rbind(cv_grid_final, data.frame(k="NA", err = mean(errs), std_err = sd(errs)/sqrt(K_folds),  row.names = c("Linear Model"))) %>% dplyr::select(-std_err)
@@ -103,8 +105,16 @@ colnames(cv_grid_final) = c("k", "rMSE")
 kable(cv_grid_final)
 ```
 
+The linear model seems to do better at achieving lower out-of sample mean-squared error.
+It seems better to use the 
 choose k = `r cv_grid_final[1,1]`, standard error is smaller for the linear model.
 
+```{r}
+ggplot(cv_grid) + 
+  geom_point(aes(x=k, y=err)) + 
+  geom_errorbar(aes(x=k, ymin = err-std_err, ymax = err+std_err)) + 
+  scale_x_log10()
+```
 
 ## 3) Classification and retrospective sampling
 ```{r}
