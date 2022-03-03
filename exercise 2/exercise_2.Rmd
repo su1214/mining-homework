@@ -169,7 +169,7 @@ hotels_dev_folds = crossv_kfold(hotels_dev, k=K_folds)
 hotels_baseline1 = map(hotels_dev_folds$train, ~ glm(children ~ market_segment + adults + customer_type + is_repeated_guest, data = ., family = 'binomial'))
 hotels_baseline1_err = map2_dbl(hotels_baseline1, hotels_dev_folds$test, modelr::rmse) %>% mean
 
-hotels_baseline2 = map(hotels_dev_folds$train, ~ glm(children ~ -arrival_date, data = .))
+hotels_baseline2 = map(hotels_dev_folds$train, ~ glm(children ~ . - arrival_date, data = .))
 hotels_baseline2_err = map2_dbl(hotels_baseline2, hotels_dev_folds$test, modelr::rmse) %>% mean
 
 hotels_lpm = map(hotels_dev_folds$train, ~ lm(children ~ . -arrival_date - days_in_waiting_list - required_car_parking_spaces + average_daily_rate:total_of_special_requests + is_repeated_guest:total_of_special_requests + is_repeated_guest:average_daily_rate, data = .))
@@ -183,8 +183,8 @@ kable(hotels_errs)
 hotels_val = read_csv("hotels_val.csv")
 
 #step 1
-phat_test_baseline1 = predict(hotels_baseline1$`2`, hotels_val, type='response')
-phat_test_baseline2 = predict(hotels_baseline2$`2`, hotels_val, type='response')
+phat_test_baseline1 = predict(hotels_baseline1$`1`, hotels_val, type='response')
+phat_test_baseline2 = predict(hotels_baseline2$`1`, hotels_val, type='response')
 phat_test_lpm = predict(hotels_lpm$`2`, hotels_val, type='response')
 thresh_grid = seq(0.95, 0.05, by=-0.005)
 
