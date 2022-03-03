@@ -102,66 +102,69 @@ cv_grid_final = cv_grid %>% filter(err == min(cv_grid$err))
 rownames(cv_grid_final) = c("KNN Model")
 cv_grid_final = rbind(cv_grid_final, data.frame(k="NA", err = mean(errs), std_err = sd(errs)/sqrt(K_folds),  row.names = c("Linear Model"))) %>% dplyr::select(-std_err)
 colnames(cv_grid_final) = c("k", "rMSE")
-kable(cv_grid_final)
 ```
 
 The linear model seems to do better at achieving lower out-of sample mean-squared error.
-It seems better to use the 
-choose k = `r cv_grid_final[1,1]`, standard error is smaller for the linear model.
+It is also beneficial to use this model as we can distinguish which variables have significant
+effects on the house prices. The Lot Size, Land Value, Living Area, Waterfront and Central Air Conditioning have significant effects on the house prices. All of them are positively correlated with the house prices.
+
+### Appendix of Q2
 
 ```{r}
 ggplot(cv_grid) + 
   geom_point(aes(x=k, y=err)) + 
   geom_errorbar(aes(x=k, ymin = err-std_err, ymax = err+std_err)) + 
   scale_x_log10()
+
+kable(cv_grid_final)
+summary(saratogalinear$`1`)
 ```
+Choose k = `r cv_grid_final[1,1]` as it has the smallest mean RMSE over 5 folds. <br>
+Standard error is smaller for the linear model.
 
 ## 3) Classification and retrospective sampling
 ```{r}
-data_g = read_csv('german_credit.csv')
+data_g = read.csv('german_credit.csv', row.names=1)
 prob_g = xtabs(~history+Default, data=data_g) %>%
   prop.table %>%
   round(3)
 
-history = c("good","poor","terrible")
-default_prob = c(5.3, 19.7, 5.0)
-prob_table = as.data.frame(list(history=history, default_prob=default_prob))
+prob_table = as.data.frame(list(history = c("terrible","poor","good"), 
+                                default_prob = c(prob_g[3,2], prob_g[2,2], prob_g[1,2])))
 
 ggplot(prob_table) +
-  geom_col(aes(x=history, y=default_prob, fill=history)) +
-    labs(x = 'History', y = 'Default % Probability', color = 'History')
+  geom_col(aes(x=history, y=default_prob), fill = 'pink') +
+    labs(x = 'History', y = 'Probability of Default')
 ```
 
 ```{r}
-
 german_credit = initial_split(data_g, prob=0.8)
 german_credit_train = training(german_credit)
 german_credit_test = testing(german_credit)
 
 german_credit_model = glm(Default ~ duration + amount + installment + age + history + purpose + foreign, data = german_credit_train, family = binomial)
 
-coef(german_credit_model) %>% round(2)
+coef(german_credit_model) %>% exp %>% round(2)
 
 phat_test_german_credit = predict(german_credit_model, german_credit_test, type='response')
-
 yhat_test_german_credit = ifelse(phat_test_german_credit > 0.5, 1, 0)
-
 confusion_out_logit = table(y= german_credit_test$Default, yhat = yhat_test_german_credit)
-
 confusion_out_logit
+accuracy = (confusion_out_logit[1,1] + confusion_out_logit[2,2])/sum(confusion_out_logit)
+kable(data_g %>% group_by(history) %>% summarize(count = n()) %>% rbind(data.frame(history = "total", count = 1000)))
 ```
+
+In this logistic regression model, having the `historypoor` variable 1 multiplies odds of default by 0.39 and having the `historyterrible` variable 1 multiplies odds of default by 0.19. This means that having poor or terrible credit actually decreases the probability of default. This does not reconcile with the common sense; we think the dataset is not appropriate for building a predictive model of defaults especially if the purpose of the model is to screen prospective borrowers to classify them into "high" versus "low" probability of default. It is because of the data sampling process. In the data sampling process, instead of random sampling, the bank picked the defaulted loans and looked for similar kinds of loans. This likely created a big bias in the data collecting process: as mentioned above, in common sense, it is likely that the credit history for defaulted loans are poor or terrible and it would not include enough dataset with good credit history. In fact, out of 1000 observations, only 89 observaations have good credit history. I would suggest the bank to use random sampling method even though it would not include a lot of defaulted loans. If possible, increasing the size of the observations will help tremendously.
+
+
 ## 4) Children and hotel reservations
 
 ```{r}
 hotels_dev = read_csv("hotels_dev.csv")
-hotels_val = read_csv("hotels_val.csv")
 
 K_folds = 5
 
 hotels_dev_folds = crossv_kfold(hotels_dev, k=K_folds)
-
-k_grid = c(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 
-           30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200, 250, 300)
 
 hotels_baseline1 = map(hotels_dev_folds$train, ~ glm(children ~ market_segment + adults + customer_type + is_repeated_guest, data = ., family = 'binomial'))
 hotels_baseline1_err = map2_dbl(hotels_baseline1, hotels_dev_folds$test, modelr::rmse) %>% mean
@@ -169,13 +172,53 @@ hotels_baseline1_err = map2_dbl(hotels_baseline1, hotels_dev_folds$test, modelr:
 hotels_baseline2 = map(hotels_dev_folds$train, ~ glm(children ~ -arrival_date, data = .))
 hotels_baseline2_err = map2_dbl(hotels_baseline2, hotels_dev_folds$test, modelr::rmse) %>% mean
 
-hotels_lpm = map(hotels_dev_folds$train, ~ lm(children ~ market_segment + adults + customer_type + is_repeated_guest, data = .))
+hotels_lpm = map(hotels_dev_folds$train, ~ lm(children ~ . -arrival_date - days_in_waiting_list - required_car_parking_spaces + average_daily_rate:total_of_special_requests + is_repeated_guest:total_of_special_requests + is_repeated_guest:average_daily_rate, data = .))
 hotels_lpm_err = map2_dbl(hotels_lpm, hotels_dev_folds$test, modelr::rmse) %>% mean
 
 hotels_errs = data.frame(c(hotels_baseline1_err, hotels_baseline2_err, hotels_lpm_err))
 colnames(hotels_errs) = c("Out-of-Sample RMSE")
 rownames(hotels_errs) = c("Baseline 1", "Baseline 2", "Linear (Logit) Model")
 kable(hotels_errs)
+
+hotels_val = read_csv("hotels_val.csv")
+
+#step 1
+phat_test_baseline1 = predict(hotels_baseline1$`2`, hotels_val, type='response')
+phat_test_baseline2 = predict(hotels_baseline2$`2`, hotels_val, type='response')
+phat_test_lpm = predict(hotels_lpm$`2`, hotels_val, type='response')
+thresh_grid = seq(0.95, 0.05, by=-0.005)
+
+roc_curve_hotels = foreach(thresh = thresh_grid, .combine='rbind') %do% {
+  
+  yhat_test_baseline1 = ifelse(phat_test_baseline1 >= thresh, 1, 0)
+  yhat_test_baseline2 = ifelse(phat_test_baseline2 >= thresh, 1, 0)
+  yhat_test_lpm = ifelse(phat_test_lpm >= thresh, 1, 0)
+  
+  confusion_out_baseline1 = table(y = hotels_val$children, yhat = yhat_test_baseline1)
+  confusion_out_baseline2 = table(y = hotels_val$children, yhat = yhat_test_baseline2)
+  confusion_out_lpm = table(y = hotels_val$children, yhat = yhat_test_lpm)
+
+  # FPR, TPR for linear model
+
+   out_baseline1 = data.frame(model = "baseline1",
+                       TPR = ifelse(class(try(confusion_out_baseline1[2,"1"], silent=TRUE)) == "try-error", 0, confusion_out_baseline1[2,"1"]/sum(hotels_val$children==1)),
+                       FPR = ifelse(class(try(confusion_out_baseline1[1,"1"], silent=TRUE)) == "try-error", 0, confusion_out_baseline1[1,"1"]/sum(hotels_val$children==0)))
+
+   out_baseline2 = data.frame(model = "baseline2",
+                       TPR = ifelse(class(try(confusion_out_baseline2[2,"1"], silent=TRUE)) == "try-error", 0, confusion_out_baseline2[2,"1"]/sum(hotels_val$children==1)),
+                       FPR = ifelse(class(try(confusion_out_baseline2[1,"1"], silent=TRUE)) == "try-error", 0, confusion_out_baseline2[1,"1"]/sum(hotels_val$children==0)))
+
+   out_lpm = data.frame(model = "LPM",
+                       TPR = ifelse(class(try(confusion_out_lpm[2,"1"], silent=TRUE)) == "try-error", 0, confusion_out_lpm[2,"1"]/sum(hotels_val$children==1)),
+                       FPR = ifelse(class(try(confusion_out_lpm[2,"1"], silent=TRUE)) == "try-error", 0, confusion_out_lpm[1,"1"]/sum(hotels_val$children==0)))
+
+  rbind(out_baseline1, out_baseline2, out_lpm)
+} %>% as.data.frame()
+
+ggplot(roc_curve_hotels) +
+  geom_line(aes(x=FPR, y=TPR, color=model)) +
+  ylim(0,1) + xlim(0,1) +
+  labs(title="ROC curves") 
 ```
 
 
