@@ -1,5 +1,5 @@
 ---
-title: "ECO395M: Exercise 1"
+title: "ECO395M: Exercise 2"
 author: "Steven Kim and Shreekara Shastry"
 date: ""
 output:
