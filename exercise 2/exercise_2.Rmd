@@ -221,21 +221,28 @@ ggplot(roc_curve_hotels) +
 ```
 ```{r}
 K_folds = 20
+folds = createFolds(hotels_val$children, k=K_folds)
 
-hotels_dev_folds_final = crossv_kfold(hotels_val, k=K_folds)
+results = lapply(folds, function(x){
+  test = hotels_val[x,]
+  pred = predict(hotels_baseline2, test)
+   return(pred)
+})
 
-hotels_prediction = map(hotels_dev_folds_final$test, ~ predict(hotels_baseline2$`1`, data= ., type='response'))
+actual = lapply(folds, function(x){
+    test = hotels_val[x,]
+    return(sum(test$children))
+})
 
-final = foreach(k = sep(1, 20), .combine=rbind) %do% { 
-  predicted = sum(hotels_prediction$`k`)
-  actual = sum(hotels_dev_folds_final$test$`k`$data$children)
-  difference = actual - predicted
-  cbind(predicted, actual, difference)
-} %>% as.data.frame()
+predicted = c()
+difference = c()
+for (k in seq(1, 20)){ 
+  predicted = append(predicted, mean(unlist(results[k]))*250)
+  difference = append(difference, as.integer(unlist(actual[k])) - as.integer(predicted[k]))
+}
 
+final = cbind(predicted, actual, difference)
 final
-sum(hotels_prediction$`1`)
-sum(hotels_dev_folds_final$test$`1`$data$children)
 ```
 
 
