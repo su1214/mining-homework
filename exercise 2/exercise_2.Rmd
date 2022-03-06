@@ -177,7 +177,7 @@ hotels_lpm_err = map2_dbl(hotels_lpm, hotels_dev_folds$test, modelr::rmse) %>% m
 
 hotels_errs = data.frame(c(hotels_baseline1_err, hotels_baseline2_err, hotels_lpm_err))
 colnames(hotels_errs) = c("Out-of-Sample RMSE")
-rownames(hotels_errs) = c("Baseline 1", "Baseline 2", "Linear (Logit) Model")
+rownames(hotels_errs) = c("Baseline 1", "Baseline 2", "Linear Model")
 kable(hotels_errs)
 
 hotels_val = read_csv("hotels_val.csv")
