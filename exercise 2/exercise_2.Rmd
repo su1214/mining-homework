@@ -158,6 +158,8 @@ In this logistic regression model, having the `historypoor` variable 1 multiplie
 
 ## 4) Children and hotel reservations
 
+### Model Building
+
 ```{r}
 hotels_dev = read_csv("hotels_dev.csv")
 
@@ -167,49 +169,59 @@ hotels_dev_folds = crossv_kfold(hotels_dev, k=K_folds)
 
 hotels_baseline1 = map(hotels_dev_folds$train, ~ glm(children ~ market_segment + adults + customer_type + is_repeated_guest, data = ., family = 'binomial'))
 hotels_baseline1_err = map2_dbl(hotels_baseline1, hotels_dev_folds$test, modelr::rmse) %>% mean
+hotels_baseline1_prediction = map2(hotels_baseline1, hotels_dev_folds$test, ~ predict(.x, newdata = .y, type='response'))
 
 hotels_baseline2 = map(hotels_dev_folds$train, ~ glm(children ~ . - arrival_date, data = .))
 hotels_baseline2_err = map2_dbl(hotels_baseline2, hotels_dev_folds$test, modelr::rmse) %>% mean
+hotels_baseline2_prediction = map2(hotels_baseline2, hotels_dev_folds$test, ~ predict(.x, newdata = .y, type='response'))
 
 hotels_lpm = map(hotels_dev_folds$train, ~ lm(children ~ . -arrival_date - days_in_waiting_list - required_car_parking_spaces + average_daily_rate:total_of_special_requests + is_repeated_guest:total_of_special_requests + is_repeated_guest:average_daily_rate, data = .))
 hotels_lpm_err = map2_dbl(hotels_lpm, hotels_dev_folds$test, modelr::rmse) %>% mean
+hotels_lpm_prediction = map2(hotels_lpm, hotels_dev_folds$test, ~ predict(.x, newdata = .y))
 
 hotels_errs = data.frame(c(hotels_baseline1_err, hotels_baseline2_err, hotels_lpm_err))
 colnames(hotels_errs) = c("Out-of-Sample RMSE")
 rownames(hotels_errs) = c("Baseline 1", "Baseline 2", "Linear Model")
 kable(hotels_errs)
+```
 
-hotels_val = read_csv("hotels_val.csv")
+Baseline 2 and Linear Model have similar RMSEs. They both perform much better than the baseline 1 model.
+RMSEs were calculated with 5-fold cross validations.
 
-#step 1
-phat_test_baseline1 = predict(hotels_baseline1$`1`, hotels_val, type='response')
-phat_test_baseline2 = predict(hotels_baseline2$`1`, hotels_val, type='response')
-phat_test_lpm = predict(hotels_lpm$`2`, hotels_val, type='response')
+```{r}
 thresh_grid = seq(0.95, 0.05, by=-0.005)
+hotels_baseline1_prediction = unlist(hotels_baseline1_prediction, use.names=F)
+hotels_baseline2_prediction = unlist(hotels_baseline2_prediction, use.names=F)
+hotels_lpm_prediction = unlist(hotels_lpm_prediction, use.names=F)
 
 roc_curve_hotels = foreach(thresh = thresh_grid, .combine='rbind') %do% {
-  
-  yhat_test_baseline1 = ifelse(phat_test_baseline1 >= thresh, 1, 0)
-  yhat_test_baseline2 = ifelse(phat_test_baseline2 >= thresh, 1, 0)
-  yhat_test_lpm = ifelse(phat_test_lpm >= thresh, 1, 0)
-  
-  confusion_out_baseline1 = table(y = hotels_val$children, yhat = yhat_test_baseline1)
-  confusion_out_baseline2 = table(y = hotels_val$children, yhat = yhat_test_baseline2)
-  confusion_out_lpm = table(y = hotels_val$children, yhat = yhat_test_lpm)
+
+  yhat_test_baseline1 = ifelse(hotels_baseline1_prediction >= thresh, 1, 0)
+  yhat_test_baseline2 = ifelse(hotels_baseline2_prediction >= thresh, 1, 0)
+  yhat_test_lpm = ifelse(hotels_lpm_prediction >= thresh, 1, 0)
+
+  confusion_out_baseline1 = table(y = hotels_dev$children, yhat = yhat_test_baseline1)
+  confusion_out_baseline2 = table(y = hotels_dev$children, yhat = yhat_test_baseline2)
+  confusion_out_lpm = table(y = hotels_dev$children, yhat = yhat_test_lpm)
 
   # FPR, TPR for linear model
 
-   out_baseline1 = data.frame(model = "baseline1",
-                       TPR = ifelse(class(try(confusion_out_baseline1[2,"1"], silent=TRUE)) == "try-error", 0, confusion_out_baseline1[2,"1"]/sum(hotels_val$children==1)),
-                       FPR = ifelse(class(try(confusion_out_baseline1[1,"1"], silent=TRUE)) == "try-error", 0, confusion_out_baseline1[1,"1"]/sum(hotels_val$children==0)))
+  out_baseline1 = data.frame(model = "baseline1",
+                         TPR = ifelse(class(try(confusion_out_baseline1[2,"1"], silent=TRUE)) == "try-error", 0, confusion_out_baseline1[2,"1"]/sum(hotels_dev$children==1)),
+                         FPR = ifelse(class(try(confusion_out_baseline1[1,"1"], silent=TRUE)) == "try-error", 0, confusion_out_baseline1[1,"1"]/sum(hotels_dev$children==0)), 
+                         thresh = thresh)
 
-   out_baseline2 = data.frame(model = "baseline2",
-                       TPR = ifelse(class(try(confusion_out_baseline2[2,"1"], silent=TRUE)) == "try-error", 0, confusion_out_baseline2[2,"1"]/sum(hotels_val$children==1)),
-                       FPR = ifelse(class(try(confusion_out_baseline2[1,"1"], silent=TRUE)) == "try-error", 0, confusion_out_baseline2[1,"1"]/sum(hotels_val$children==0)))
 
-   out_lpm = data.frame(model = "LPM",
-                       TPR = ifelse(class(try(confusion_out_lpm[2,"1"], silent=TRUE)) == "try-error", 0, confusion_out_lpm[2,"1"]/sum(hotels_val$children==1)),
-                       FPR = ifelse(class(try(confusion_out_lpm[2,"1"], silent=TRUE)) == "try-error", 0, confusion_out_lpm[1,"1"]/sum(hotels_val$children==0)))
+  out_baseline2 = data.frame(model = "baseline2",
+                         TPR = ifelse(class(try(confusion_out_baseline2[2,"1"], silent=TRUE)) == "try-error", 0, confusion_out_baseline2[2,"1"]/sum(hotels_dev$children==1)),
+                         FPR = ifelse(class(try(confusion_out_baseline2[1,"1"], silent=TRUE)) == "try-error", 0, confusion_out_baseline2[1,"1"]/sum(hotels_dev$children==0)), 
+                         thresh = thresh)
+
+
+  out_lpm = data.frame(model = "LPM",
+                         TPR = ifelse(class(try(confusion_out_lpm[2,"1"], silent=TRUE)) == "try-error", 0, confusion_out_lpm[2,"1"]/sum(hotels_dev$children==1)),
+                         FPR = ifelse(class(try(confusion_out_lpm[2,"1"], silent=TRUE)) == "try-error", 0, confusion_out_lpm[1,"1"]/sum(hotels_dev$children==0)), 
+                       thresh = thresh)
 
   rbind(out_baseline1, out_baseline2, out_lpm)
 } %>% as.data.frame()
@@ -217,32 +229,76 @@ roc_curve_hotels = foreach(thresh = thresh_grid, .combine='rbind') %do% {
 ggplot(roc_curve_hotels) +
   geom_line(aes(x=FPR, y=TPR, color=model)) +
   ylim(0,1) + xlim(0,1) +
-  labs(title="ROC curves") 
+  labs(title="ROC curves")
 ```
+
+The ROC curves are also better for baseline 2 and the linear model than that of baseline 1.
+The two look similar to each other.
+
+```{r}
+kable(roc_curve_hotels %>% filter(thresh == "0.5") %>% dplyr::select(-thresh))
+```
+
+This table has the TPR and FPR of the models when the threshold is set at 0.5. We can see that the baseline 2 and LPM has higher TPRs.
+
+### Model validation: step 1
+
+```{r}
+hotels_val = read_csv("hotels_val.csv")
+phat_val_baseline2 = predict(hotels_baseline2$`1`, hotels_val, type='response')
+thresh_grid = seq(0.95, 0.05, by=-0.005)
+roc_curve_hotels_val = foreach(thresh = thresh_grid, .combine='rbind') %do% {
+  
+  yhat_val_baseline2 = ifelse(phat_val_baseline2 >= thresh, 1, 0)
+  
+  confusion_out_baseline2 = table(y = hotels_val$children, yhat = yhat_val_baseline2)
+
+  # FPR, TPR for linear model
+
+  out_baseline2 = data.frame(model = "baseline2",
+                         TPR = ifelse(class(try(confusion_out_baseline2[2,"1"], silent=TRUE)) == "try-error", 0, confusion_out_baseline2[2,"1"]/sum(hotels_val$children==1)),
+                         FPR = ifelse(class(try(confusion_out_baseline2[1,"1"], silent=TRUE)) == "try-error", 0, confusion_out_baseline2[1,"1"]/sum(hotels_val$children==0)))
+
+  rbind(out_baseline2)
+} %>% as.data.frame()
+
+ggplot(roc_curve_hotels_val) +
+  geom_line(aes(x=FPR, y=TPR)) +
+  ylim(0,1) + xlim(0,1) +
+  labs(title="ROC curve of baseline 2 using hotels_val data")
+```
+
+
+### Model validation: step 2
+
 ```{r}
 K_folds = 20
-folds = createFolds(hotels_val$children, k=K_folds)
+hotels_val_folds = createFolds(hotels_val$children, k=K_folds)
 
-results = lapply(folds, function(x){
+hotels_results = lapply(hotels_val_folds, function(x){
   test = hotels_val[x,]
-  pred = predict(hotels_baseline2, test)
+  pred = predict(hotels_baseline2$`1`, test)
    return(pred)
 })
 
-actual = lapply(folds, function(x){
+hotels_actual = lapply(hotels_val_folds, function(x){
     test = hotels_val[x,]
     return(sum(test$children))
 })
 
-predicted = c()
-difference = c()
+hotels_predicted = c()
+hotels_difference = c()
 for (k in seq(1, 20)){ 
-  predicted = append(predicted, mean(unlist(results[k]))*250)
-  difference = append(difference, as.integer(unlist(actual[k])) - as.integer(predicted[k]))
+  hotels_predicted = append(hotels_predicted, as.integer(sum(unlist(hotels_results[k]))))
+  hotels_difference = append(hotels_difference, as.integer(unlist(hotels_actual[k])) - as.integer(hotels_predicted[k]))
 }
 
-final = cbind(predicted, actual, difference)
-final
+hotels_final = cbind(hotels_predicted, hotels_actual, hotels_difference)
+hotels_final = rbind(hotels_final, hotels_final %>% apply(2, unlist) %>% apply(2, abs) %>% apply(2, sum))
+rownames(hotels_final)[21] = "total"
+hotels_final[21, 3] = as.integer(hotels_final[21, 1]) - as.integer(hotels_final[21, 2])
+kable(hotels_final)
 ```
 
+The model does the prediction pretty well. It only had `r hotels_final[21, 3]` predictions wrong in total out of 4999 observations.
 

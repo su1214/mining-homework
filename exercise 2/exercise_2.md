@@ -19,8 +19,8 @@ them are positively correlated with the house prices.
 
 |              | k   |     rMSE |
 |:-------------|:----|---------:|
-| KNN Model    | 13  | 62700.05 |
-| Linear Model | NA  | 59251.06 |
+| KNN Model    | 11  | 62665.91 |
+| Linear Model | NA  | 59059.56 |
 
     ## 
     ## Call:
@@ -29,34 +29,34 @@ them are positively correlated with the house prices.
     ## 
     ## Residuals:
     ##     Min      1Q  Median      3Q     Max 
-    ## -231664  -34400   -5223   26792  410984 
+    ## -223108  -34705   -4185   28413  453701 
     ## 
     ## Coefficients:
     ##                          Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)             2.229e+05  2.552e+04   8.732  < 2e-16 ***
-    ## lotSize                 1.166e+04  2.651e+03   4.398 1.18e-05 ***
-    ## age                    -1.274e+02  6.478e+01  -1.967  0.04936 *  
-    ## landValue               8.290e-01  5.105e-02  16.239  < 2e-16 ***
-    ## livingArea              6.429e+01  5.221e+00  12.315  < 2e-16 ***
-    ## bedrooms               -5.417e+03  2.857e+03  -1.896  0.05814 .  
-    ## fireplaces              2.061e+03  3.248e+03   0.634  0.52595    
-    ## bathrooms              -2.192e+03  8.478e+03  -0.259  0.79605    
-    ## rooms                  -3.906e+03  2.300e+03  -1.698  0.08969 .  
-    ## heatinghot water/steam -4.635e+03  4.635e+03  -1.000  0.31743    
-    ## heatingelectric         4.050e+03  1.387e+04   0.292  0.77032    
-    ## fuelelectric           -1.243e+04  1.364e+04  -0.912  0.36209    
-    ## fueloil                -1.886e+03  5.530e+03  -0.341  0.73308    
-    ## waterfrontNo           -1.468e+05  1.991e+04  -7.376 2.81e-13 ***
-    ## centralAirNo           -1.143e+04  3.775e+03  -3.028  0.00251 ** 
-    ## bathrooms:rooms         3.369e+03  1.064e+03   3.168  0.00157 ** 
+    ## (Intercept)             1.782e+05  2.443e+04   7.293 5.10e-13 ***
+    ## lotSize                 9.131e+03  2.266e+03   4.029 5.90e-05 ***
+    ## age                    -3.295e+01  6.491e+01  -0.508  0.61174    
+    ## landValue               9.039e-01  5.348e-02  16.900  < 2e-16 ***
+    ## livingArea              6.289e+01  5.371e+00  11.710  < 2e-16 ***
+    ## bedrooms               -7.081e+03  2.931e+03  -2.416  0.01581 *  
+    ## fireplaces              2.058e+03  3.403e+03   0.605  0.54554    
+    ## bathrooms               5.259e+03  8.499e+03   0.619  0.53613    
+    ## rooms                  -1.852e+03  2.313e+03  -0.801  0.42335    
+    ## heatinghot water/steam -7.085e+03  4.713e+03  -1.503  0.13300    
+    ## heatingelectric        -1.331e+03  1.285e+04  -0.104  0.91750    
+    ## fuelelectric           -9.419e+03  1.259e+04  -0.748  0.45465    
+    ## fueloil                -4.768e+03  5.407e+03  -0.882  0.37807    
+    ## waterfrontNo           -1.126e+05  1.751e+04  -6.432 1.73e-10 ***
+    ## centralAirNo           -1.170e+04  3.865e+03  -3.028  0.00251 ** 
+    ## bathrooms:rooms         2.525e+03  1.071e+03   2.358  0.01853 *  
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## Residual standard error: 58040 on 1366 degrees of freedom
-    ## Multiple R-squared:  0.6451, Adjusted R-squared:  0.6413 
-    ## F-statistic: 165.6 on 15 and 1366 DF,  p-value: < 2.2e-16
+    ## Residual standard error: 58940 on 1366 degrees of freedom
+    ## Multiple R-squared:  0.6481, Adjusted R-squared:  0.6442 
+    ## F-statistic: 167.7 on 15 and 1366 DF,  p-value: < 2.2e-16
 
-Choose k = 13 as it has the smallest mean RMSE over 5 folds. <br>
+Choose k = 11 as it has the smallest mean RMSE over 5 folds. <br>
 Standard error is smaller for the linear model.
 
 ## 3) Classification and retrospective sampling
@@ -64,16 +64,11 @@ Standard error is smaller for the linear model.
 ![](exercise_2_files/figure-markdown_github/unnamed-chunk-5-1.png)
 
     ##         (Intercept)            duration              amount         installment 
-    ##                0.53                1.03                1.00                1.22 
+    ##                0.62                1.02                1.00                1.24 
     ##                 age         historypoor     historyterrible          purposeedu 
-    ##                0.98                0.34                0.14                1.88 
+    ##                0.98                0.34                0.16                1.93 
     ## purposegoods/repair       purposenewcar      purposeusedcar       foreigngerman 
-    ##                0.96                2.24                0.41                0.25
-
-    ##    yhat
-    ## y     0   1
-    ##   0 160  17
-    ##   1  54  19
+    ##                0.92                1.92                0.23                0.42
 
 | history  | count |
 |:---------|------:|
@@ -103,32 +98,61 @@ increasing the size of the observations will help tremendously.
 
 ## 4) Children and hotel reservations
 
-|                      | Out-of-Sample RMSE |
-|:---------------------|-------------------:|
-| Baseline 1           |          3.1198654 |
-| Baseline 2           |          0.2333196 |
-| Linear (Logit) Model |          0.2330634 |
+### Model Building
 
-![](exercise_2_files/figure-markdown_github/unnamed-chunk-7-1.png)
+|              | Out-of-Sample RMSE |
+|:-------------|-------------------:|
+| Baseline 1   |          3.1199718 |
+| Baseline 2   |          0.2332819 |
+| Linear Model |          0.2330376 |
 
-    ##    predicted actual difference
-    ## 1       2856    402      -2454
-    ## 2       2856    402      -2454
-    ## 3       2856    402      -2454
-    ## 4       2856    402      -2454
-    ## 5       2856    402      -2454
-    ## 6       2856    402      -2454
-    ## 7       2856    402      -2454
-    ## 8       2856    402      -2454
-    ## 9       2856    402      -2454
-    ## 10      2856    402      -2454
-    ## 11      2856    402      -2454
-    ## 12      2856    402      -2454
-    ## 13      2856    402      -2454
-    ## 14      2856    402      -2454
-    ## 15      2856    402      -2454
-    ## 16      2856    402      -2454
-    ## 17      2856    402      -2454
-    ## 18      2856    402      -2454
-    ## 19      2856    402      -2454
-    ## 20      2856    402      -2454
+Baseline 2 and Linear Model have similar RMSEs. They both perform much
+better than the baseline 1 model. RMSEs were calculated with 5-fold
+cross validations.
+
+![](exercise_2_files/figure-markdown_github/unnamed-chunk-8-1.png)
+
+The ROC curves are also better for baseline 2 and the linear model than
+that of baseline 1. The two look similar to each other.
+
+| model     |       TPR |       FPR |
+|:----------|----------:|----------:|
+| baseline1 | 0.0000000 | 0.0000000 |
+| baseline2 | 0.0412655 | 0.0408800 |
+| LPM       | 0.0409904 | 0.0404448 |
+
+This table has the TPR and FPR of the models when the threshold is set
+at 0.5. We can see that the baseline 2 and LPM has higher TPRs.
+
+### Model validation: step 1
+
+![](exercise_2_files/figure-markdown_github/unnamed-chunk-10-1.png)
+
+### Model validation: step 2
+
+|        | hotels_predicted | hotels_actual | hotels_difference |
+|:-------|:-----------------|:--------------|:------------------|
+| Fold01 | 21               | 19            | -2                |
+| Fold02 | 22               | 21            | -1                |
+| Fold03 | 23               | 17            | -6                |
+| Fold04 | 25               | 27            | 2                 |
+| Fold05 | 20               | 20            | 0                 |
+| Fold06 | 21               | 25            | 4                 |
+| Fold07 | 16               | 16            | 0                 |
+| Fold08 | 14               | 15            | 1                 |
+| Fold09 | 20               | 20            | 0                 |
+| Fold10 | 20               | 19            | -1                |
+| Fold11 | 20               | 19            | -1                |
+| Fold12 | 18               | 20            | 2                 |
+| Fold13 | 23               | 20            | -3                |
+| Fold14 | 21               | 25            | 4                 |
+| Fold15 | 23               | 26            | 3                 |
+| Fold16 | 21               | 23            | 2                 |
+| Fold17 | 20               | 17            | -3                |
+| Fold18 | 19               | 13            | -6                |
+| Fold19 | 27               | 23            | -4                |
+| Fold20 | 17               | 17            | 0                 |
+| total  | 411              | 402           | 9                 |
+
+The model does the prediction pretty well. It only had 9 predictions
+wrong in total out of 4999 observations.
