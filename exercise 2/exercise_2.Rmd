@@ -149,7 +149,6 @@ coef(german_credit_model) %>% exp %>% round(2)
 phat_test_german_credit = predict(german_credit_model, german_credit_test, type='response')
 yhat_test_german_credit = ifelse(phat_test_german_credit > 0.5, 1, 0)
 confusion_out_logit = table(y= german_credit_test$Default, yhat = yhat_test_german_credit)
-confusion_out_logit
 accuracy = (confusion_out_logit[1,1] + confusion_out_logit[2,2])/sum(confusion_out_logit)
 kable(data_g %>% group_by(history) %>% summarize(count = n()) %>% rbind(data.frame(history = "total", count = 1000)))
 ```
@@ -225,16 +224,18 @@ K_folds = 20
 
 hotels_dev_folds_final = crossv_kfold(hotels_val, k=K_folds)
 
-hotels_prediction = map(hotels_dev_folds_final$test, ~ predict(hotels_baseline2$`2`, data= ., type='response'))
+hotels_prediction = map(hotels_dev_folds_final$test, ~ predict(hotels_baseline2$`1`, data= ., type='response'))
 
-final = foreach(k = seq(1,20,by=1), .combine=rbind) %do% { 
-  predicted = sum(hotels_prediction[[k]])
-  actual = sum(hotels_dev_folds_final$test[[k]]$data$children)
+final = foreach(k = sep(1, 20), .combine=rbind) %do% { 
+  predicted = sum(hotels_prediction$`k`)
+  actual = sum(hotels_dev_folds_final$test$`k`$data$children)
   difference = actual - predicted
   cbind(predicted, actual, difference)
 } %>% as.data.frame()
 
 final
+sum(hotels_prediction$`1`)
+sum(hotels_dev_folds_final$test$`1`$data$children)
 ```
 
 
