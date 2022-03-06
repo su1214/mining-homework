@@ -17,6 +17,7 @@ library(knitr)
 library(mosaic)
 library(parallel)
 library(foreach)
+library(pROC)
 ```
 
 ## 1) Data visualization
@@ -129,12 +130,12 @@ summary(saratogalinear$`1`)
 ## 3) Classification and retrospective sampling
 ```{r}
 data_g = read.csv('german_credit.csv', row.names=1)
-prob_g = xtabs(~history+Default, data=data_g) %>%
-  prop.table %>%
-  round(3)
+prob_g = xtabs(~history+Default, data=data_g)
 
 prob_table = as.data.frame(list(history = c("terrible","poor","good"), 
-                                default_prob = c(prob_g[3,2], prob_g[2,2], prob_g[1,2])))
+                                default_prob = c(prob_g[3,2]/(prob_g[3,1]+prob_g[3,2]), 
+                                                 prob_g[2,2]/(prob_g[2,1]+prob_g[2,2]), 
+                                                 prob_g[1,2]/(prob_g[1,1]+prob_g[1,2]))))
 
 ggplot(prob_table) +
   geom_col(aes(x=history, y=default_prob), fill = 'pink') +
@@ -169,32 +170,24 @@ K_folds = 5
 
 hotels_dev_folds = crossv_kfold(hotels_dev, k=K_folds)
 
-hotels_baseline1 = map(hotels_dev_folds$train, ~ glm(children ~ market_segment + adults + customer_type + is_repeated_guest, data = ., family = 'binomial'))
-hotels_baseline1_err = map2_dbl(hotels_baseline1, hotels_dev_folds$test, modelr::rmse) %>% mean
-hotels_baseline1_prediction = map2(hotels_baseline1, hotels_dev_folds$test, ~ predict(.x, newdata = .y, type='response'))
+hotels_baseline1 = map(hotels_dev_folds$train, ~ glm(children ~ market_segment + adults + customer_type + is_repeated_guest, data = ., family = binomial))
+hotels_baseline1_prediction = map2(hotels_baseline1, hotels_dev_folds$test, ~ predict(.x, newdata = .y, type ='response'))
 
-hotels_baseline2 = map(hotels_dev_folds$train, ~ glm(children ~ . - arrival_date, data = .))
-hotels_baseline2_err = map2_dbl(hotels_baseline2, hotels_dev_folds$test, modelr::rmse) %>% mean
+hotels_baseline2 = map(hotels_dev_folds$train, ~ glm(children ~ . - arrival_date, data = ., family = binomial))
 hotels_baseline2_prediction = map2(hotels_baseline2, hotels_dev_folds$test, ~ predict(.x, newdata = .y, type='response'))
 
 hotels_lpm = map(hotels_dev_folds$train, ~ lm(children ~ . -arrival_date - days_in_waiting_list - required_car_parking_spaces + average_daily_rate:total_of_special_requests + is_repeated_guest:total_of_special_requests + is_repeated_guest:average_daily_rate, data = .))
-hotels_lpm_err = map2_dbl(hotels_lpm, hotels_dev_folds$test, modelr::rmse) %>% mean
 hotels_lpm_prediction = map2(hotels_lpm, hotels_dev_folds$test, ~ predict(.x, newdata = .y))
-
-hotels_errs = data.frame(c(hotels_baseline1_err, hotels_baseline2_err, hotels_lpm_err))
-colnames(hotels_errs) = c("Out-of-Sample RMSE")
-rownames(hotels_errs) = c("Baseline 1", "Baseline 2", "Linear Model")
-kable(hotels_errs)
 ```
 
-Baseline 2 and Linear Model have similar RMSEs. They both perform much better than the baseline 1 model.
-RMSEs were calculated with 5-fold cross validations.
 
 ```{r}
 thresh_grid = seq(0.95, 0.05, by=-0.005)
 hotels_baseline1_prediction = unlist(hotels_baseline1_prediction, use.names=F)
 hotels_baseline2_prediction = unlist(hotels_baseline2_prediction, use.names=F)
 hotels_lpm_prediction = unlist(hotels_lpm_prediction, use.names=F)
+
+#hotels_roc = roc(hotels_dev$children ~ hotels_baseline1_prediction, plot = TRUE, print.auc= TRUE)
 
 roc_curve_hotels = foreach(thresh = thresh_grid, .combine='rbind') %do% {
 
@@ -231,43 +224,47 @@ roc_curve_hotels = foreach(thresh = thresh_grid, .combine='rbind') %do% {
 ggplot(roc_curve_hotels) +
   geom_line(aes(x=FPR, y=TPR, color=model)) +
   ylim(0,1) + xlim(0,1) +
-  labs(title="ROC curves")
+  labs(title="ROC curves, train/test split pseudo out-of-sample")
 ```
 
 The ROC curves are also better for baseline 2 and the linear model than that of baseline 1.
 The two look similar to each other.
 
 ```{r}
-kable(roc_curve_hotels %>% filter(thresh == "0.5") %>% dplyr::select(-thresh))
+kable(roc_curve_hotels %>% filter(thresh == "0.5" | thresh == "0.2" | thresh == "0.7"))
 ```
 
-This table has the TPR and FPR of the models when the threshold is set at 0.5. We can see that the baseline 2 and LPM has higher TPRs.
+This table has the TPR and FPR of the models when the threshold is set at 0.7, 0.5, and 0.2. 
+Across various threshold values, baseline 1 displays too little TPRs. 
+We can see that the baseline 2 and LPM has higher TPRs.
+Specifically, LPM has slightly higher TPR when the threshold is lower(0.2) compared to baseline 2 with little difference in FPR between these two models. When threshold is 0.7, the trade-off of TPR and FPR makes it difficult to tell which one is better.
+We choose LPM for further analysis.
 
 ### Model validation: step 1
 
 ```{r}
 hotels_val = read_csv("hotels_val.csv")
-phat_val_baseline2 = predict(hotels_baseline2$`1`, hotels_val, type='response')
+phat_val_lpm = predict(hotels_lpm$`1`, hotels_val, type='response')
 thresh_grid = seq(0.95, 0.05, by=-0.005)
 roc_curve_hotels_val = foreach(thresh = thresh_grid, .combine='rbind') %do% {
   
-  yhat_val_baseline2 = ifelse(phat_val_baseline2 >= thresh, 1, 0)
+  yhat_val_lpm = ifelse(phat_val_lpm >= thresh, 1, 0)
   
-  confusion_out_baseline2 = table(y = hotels_val$children, yhat = yhat_val_baseline2)
+  confusion_out_lpm = table(y = hotels_val$children, yhat = yhat_val_lpm)
 
   # FPR, TPR for linear model
 
-  out_baseline2 = data.frame(model = "baseline2",
-                         TPR = ifelse(class(try(confusion_out_baseline2[2,"1"], silent=TRUE)) == "try-error", 0, confusion_out_baseline2[2,"1"]/sum(hotels_val$children==1)),
-                         FPR = ifelse(class(try(confusion_out_baseline2[1,"1"], silent=TRUE)) == "try-error", 0, confusion_out_baseline2[1,"1"]/sum(hotels_val$children==0)))
+  out_lpm = data.frame(model = "lpm",
+                         TPR = ifelse(class(try(confusion_out_lpm[2,"1"], silent=TRUE)) == "try-error", 0, confusion_out_lpm[2,"1"]/sum(hotels_val$children==1)),
+                         FPR = ifelse(class(try(confusion_out_lpm[1,"1"], silent=TRUE)) == "try-error", 0, confusion_out_lpm[1,"1"]/sum(hotels_val$children==0)))
 
-  rbind(out_baseline2)
+  rbind(out_lpm)
 } %>% as.data.frame()
 
 ggplot(roc_curve_hotels_val) +
   geom_line(aes(x=FPR, y=TPR)) +
   ylim(0,1) + xlim(0,1) +
-  labs(title="ROC curve of baseline 2 using hotels_val data")
+  labs(title="ROC curve of LPM using hotels_val data")
 ```
 
 
@@ -279,7 +276,7 @@ hotels_val_folds = createFolds(hotels_val$children, k=K_folds)
 
 hotels_results = lapply(hotels_val_folds, function(x){
   test = hotels_val[x,]
-  pred = predict(hotels_baseline2$`1`, test)
+  pred = predict(hotels_lpm$`1`, test)
    return(pred)
 })
 
@@ -299,6 +296,7 @@ hotels_final = cbind(hotels_predicted, hotels_actual, hotels_difference)
 hotels_final = rbind(hotels_final, hotels_final %>% apply(2, unlist) %>% apply(2, abs) %>% apply(2, sum))
 rownames(hotels_final)[21] = "total"
 hotels_final[21, 3] = as.integer(hotels_final[21, 1]) - as.integer(hotels_final[21, 2])
+colnames(hotels_final) = c("Predicted", "Actual", "Difference")
 kable(hotels_final)
 ```
 
