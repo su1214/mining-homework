@@ -19,10 +19,10 @@ them are positively correlated with the house prices.
 
 |              | k   |     rMSE |
 |:-------------|:----|---------:|
-| KNN Model    | 15  | 62865.25 |
-| Linear Model | NA  | 59102.58 |
+| KNN Model    | 9   | 62816.06 |
+| Linear Model | NA  | 59031.56 |
 
-Choose k = 15 as it has the smallest mean RMSE over 5 folds. <br>
+Choose k = 9 as it has the smallest mean RMSE over 5 folds. <br>
 Standard error is smaller for the linear model.
 
 Linear regression output is below:
@@ -34,32 +34,32 @@ Linear regression output is below:
     ## 
     ## Residuals:
     ##     Min      1Q  Median      3Q     Max 
-    ## -227180  -36547   -5135   28893  459415 
+    ## -229464  -35122   -4341   26953  461452 
     ## 
     ## Coefficients:
     ##                          Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)             1.743e+05  2.328e+04   7.487 1.26e-13 ***
-    ## lotSize                 9.527e+03  2.344e+03   4.064 5.10e-05 ***
-    ## age                    -5.958e+01  6.632e+01  -0.898 0.369156    
-    ## landValue               8.498e-01  5.286e-02  16.075  < 2e-16 ***
-    ## livingArea              6.897e+01  5.370e+00  12.844  < 2e-16 ***
-    ## bedrooms               -1.057e+04  2.907e+03  -3.635 0.000288 ***
-    ## fireplaces              3.524e+03  3.367e+03   1.047 0.295387    
-    ## bathrooms               1.370e+04  8.611e+03   1.591 0.111862    
-    ## rooms                   9.622e+02  2.359e+03   0.408 0.683383    
-    ## heatinghot water/steam -1.089e+04  4.796e+03  -2.271 0.023293 *  
-    ## heatingelectric         7.637e+03  1.388e+04   0.550 0.582165    
-    ## fuelelectric           -1.548e+04  1.359e+04  -1.139 0.254972    
-    ## fueloil                -1.806e+03  5.453e+03  -0.331 0.740612    
-    ## waterfrontNo           -1.226e+05  1.585e+04  -7.740 1.93e-14 ***
-    ## centralAirNo           -1.136e+04  3.875e+03  -2.933 0.003415 ** 
-    ## bathrooms:rooms         1.136e+03  1.079e+03   1.052 0.292848    
+    ## (Intercept)             2.079e+05  2.425e+04   8.572  < 2e-16 ***
+    ## lotSize                 9.435e+03  2.509e+03   3.761 0.000177 ***
+    ## age                    -8.685e+01  6.646e+01  -1.307 0.191552    
+    ## landValue               8.411e-01  5.229e-02  16.085  < 2e-16 ***
+    ## livingArea              6.336e+01  5.454e+00  11.615  < 2e-16 ***
+    ## bedrooms               -5.966e+03  2.900e+03  -2.057 0.039874 *  
+    ## fireplaces              1.127e+03  3.380e+03   0.334 0.738793    
+    ## bathrooms               6.218e+02  8.596e+03   0.072 0.942340    
+    ## rooms                  -3.293e+03  2.349e+03  -1.402 0.161248    
+    ## heatinghot water/steam -8.378e+03  4.819e+03  -1.739 0.082348 .  
+    ## heatingelectric        -2.264e+03  1.424e+04  -0.159 0.873701    
+    ## fuelelectric           -5.567e+03  1.399e+04  -0.398 0.690832    
+    ## fueloil                -2.433e+03  5.456e+03  -0.446 0.655774    
+    ## waterfrontNo           -1.315e+05  1.706e+04  -7.709 2.42e-14 ***
+    ## centralAirNo           -1.320e+04  3.965e+03  -3.330 0.000892 ***
+    ## bathrooms:rooms         3.119e+03  1.087e+03   2.869 0.004184 ** 
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## Residual standard error: 59360 on 1366 degrees of freedom
-    ## Multiple R-squared:  0.634,  Adjusted R-squared:   0.63 
-    ## F-statistic: 157.8 on 15 and 1366 DF,  p-value: < 2.2e-16
+    ## Residual standard error: 59730 on 1366 degrees of freedom
+    ## Multiple R-squared:  0.6384, Adjusted R-squared:  0.6344 
+    ## F-statistic: 160.8 on 15 and 1366 DF,  p-value: < 2.2e-16
 
 ## 3) Classification and retrospective sampling
 
@@ -103,14 +103,14 @@ that of baseline 1. The two look similar to each other.
 | model     |       TPR |       FPR | thresh |
 |:----------|----------:|----------:|-------:|
 | baseline1 | 0.0000000 | 0.0000000 |    0.7 |
-| baseline2 | 0.0514443 | 0.0014747 |    0.7 |
-| LPM       | 0.0258597 | 0.0007494 |    0.7 |
+| baseline2 | 0.0517194 | 0.0015230 |    0.7 |
+| LPM       | 0.0286107 | 0.0008945 |    0.7 |
 | baseline1 | 0.0000000 | 0.0000000 |    0.5 |
-| baseline2 | 0.0836314 | 0.0033845 |    0.5 |
-| LPM       | 0.0872077 | 0.0036988 |    0.5 |
-| baseline1 | 0.0000000 | 0.0000242 |    0.2 |
-| baseline2 | 0.1345254 | 0.0125952 |    0.2 |
-| LPM       | 0.1334250 | 0.0127886 |    0.2 |
+| baseline2 | 0.0891334 | 0.0030944 |    0.5 |
+| LPM       | 0.0852820 | 0.0035054 |    0.5 |
+| baseline1 | 0.0002751 | 0.0000242 |    0.2 |
+| baseline2 | 0.1372765 | 0.0114590 |    0.2 |
+| LPM       | 0.1342503 | 0.0128369 |    0.2 |
 
 This table has the TPR and FPR of the models when the threshold is set
 at 0.7, 0.5, and 0.2. Across various threshold values, baseline 1
@@ -125,27 +125,27 @@ higher TPRs. We choose baseline2 for further analysis.
 
 |        | Predicted | Actual | Difference |
 |:-------|:----------|:-------|:-----------|
-| Fold01 | 19        | 20     | 1          |
-| Fold02 | 19        | 22     | 3          |
-| Fold03 | 20        | 10     | -10        |
-| Fold04 | 22        | 28     | 6          |
-| Fold05 | 20        | 18     | -2         |
-| Fold06 | 21        | 17     | -4         |
-| Fold07 | 19        | 19     | 0          |
-| Fold08 | 21        | 22     | 1          |
-| Fold09 | 23        | 22     | -1         |
-| Fold10 | 17        | 16     | -1         |
-| Fold11 | 23        | 21     | -2         |
-| Fold12 | 21        | 18     | -3         |
-| Fold13 | 22        | 23     | 1          |
+| Fold01 | 23        | 29     | 6          |
+| Fold02 | 18        | 18     | 0          |
+| Fold03 | 22        | 20     | -2         |
+| Fold04 | 21        | 23     | 2          |
+| Fold05 | 23        | 24     | 1          |
+| Fold06 | 20        | 20     | 0          |
+| Fold07 | 20        | 22     | 2          |
+| Fold08 | 18        | 17     | -1         |
+| Fold09 | 23        | 20     | -3         |
+| Fold10 | 21        | 19     | -2         |
+| Fold11 | 19        | 19     | 0          |
+| Fold12 | 21        | 17     | -4         |
+| Fold13 | 18        | 15     | -3         |
 | Fold14 | 21        | 19     | -2         |
-| Fold15 | 23        | 26     | 3          |
-| Fold16 | 22        | 23     | 1          |
-| Fold17 | 19        | 22     | 3          |
-| Fold18 | 26        | 24     | -2         |
-| Fold19 | 19        | 11     | -8         |
-| Fold20 | 22        | 21     | -1         |
-| total  | 419       | 402    | 17         |
+| Fold15 | 20        | 16     | -4         |
+| Fold16 | 20        | 16     | -4         |
+| Fold17 | 24        | 23     | -1         |
+| Fold18 | 21        | 22     | 1          |
+| Fold19 | 17        | 17     | 0          |
+| Fold20 | 26        | 26     | 0          |
+| total  | 416       | 402    | 76         |
 
-The model does the prediction pretty well. It only had 72 predictions
+The model does the prediction pretty well. It only had 76 predictions
 wrong in total out of 4999 observations.
