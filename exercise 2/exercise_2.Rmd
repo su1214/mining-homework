@@ -294,5 +294,5 @@ colnames(hotels_final) = c("Predicted", "Actual", "Difference")
 kable(hotels_final)
 ```
 
-The model does the prediction pretty well. It only had `r abs(as.integer(hotels_final[21, 3]))` predictions wrong in total out of 4999 observations.
+The model does the prediction pretty well. It only had `r sum(abs(as.integer(hotels_final[, 3])))` predictions wrong in total out of 4999 observations.
 
