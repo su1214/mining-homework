@@ -289,10 +289,10 @@ for (k in seq(1, 20)){
 hotels_final = cbind(hotels_predicted, hotels_actual, hotels_difference)
 hotels_final = rbind(hotels_final, hotels_final %>% apply(2, unlist) %>% apply(2, abs) %>% apply(2, sum))
 rownames(hotels_final)[21] = "total"
-hotels_final[21, 3] = sum(abs(as.integer(hotels_final[, 3])))
+hotels_final[21, 3] = as.integer(hotels_final[21, 1]) - as.integer(hotels_final[21, 2])
 colnames(hotels_final) = c("Predicted", "Actual", "Difference")
 kable(hotels_final)
 ```
 
-The model does the prediction pretty well. It only had `r abs(as.integer(hotels_final[21, 3]))` predictions wrong in total out of 4999 observations.
+The model does the prediction pretty well. It only got `r abs(as.integer(hotels_final[21, 3]))` predictions wrong in total out of 4999 observations though if you look at each folds individually there is a difference as in sometimes we have negative and sometimes positive values, but in total it all averages out to `r abs(as.integer(hotels_final[21, 3]))`. 
 
