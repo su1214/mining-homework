@@ -1,0 +1,41 @@
+---
+title: "ECO395M: Exercise 3"
+author: "Steven Kim and Shreekara Shastry"
+date: ""
+output:
+  md_document:
+    variant: markdown_github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(tidyverse)
+library(knitr)
+```
+
+## What causes what?
+
+1. 
+
+## Tree modeling: dengue cases
+
+```{r}
+dengue = read_csv('dengue.csv')
+```
+
+## Predictive model building: green certification
+
+```{r}
+greenbuildings = read_csv("greenbuildings.csv")
+
+```
+
+
+## Predictive model building: California housing
+
+```{r}
+CAhousing = read_csv("CAhousing.csv")
+```
+
+The model does the prediction pretty well. It only got `r abs(as.integer(hotels_final[21, 3]))` predictions wrong in total out of 4999 observations though if you look at each folds individually there is a difference as in sometimes we have negative and sometimes positive values, but in total it all averages out to `r abs(as.integer(hotels_final[21, 3]))`. 
+
