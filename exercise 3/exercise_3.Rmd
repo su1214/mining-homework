@@ -37,9 +37,14 @@ How were the researchers from UPenn able to isolate this effect? Briefly describ
 ```{r}
 dengue = read_csv('dengue.csv') %>% drop_na()
 
+dengue$city = dengue$city %>% factor()
+dengue$season = dengue$season %>% factor()
+
 dengue_split = initial_split(dengue, 0.8)
 dengue_train = training(dengue_split)
 dengue_test = testing(dengue_split)
+
+#including city didn't really help
 
 # CART
 dengue.tree = rpart(total_cases ~ season + specific_humidity + tdtr_k + precipitation_amt, 
@@ -74,7 +79,7 @@ dengue.forest = randomForest(total_cases ~ season + specific_humidity + tdtr_k +
 plotcp(dengue.tree)
 
 # Gradient Boosting
-dengue.gbs = gbm(total_cases ~ specific_humidity + tdtr_k + precipitation_amt, 
+dengue.gbs = gbm(total_cases ~ season + specific_humidity + tdtr_k + precipitation_amt, 
                     data=dengue_train, distribution = "gaussian",n.trees = 10000,
                   shrinkage = 0.01, interaction.depth = 4)
 
