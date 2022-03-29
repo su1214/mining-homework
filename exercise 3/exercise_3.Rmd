@@ -11,8 +11,10 @@ output:
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 library(tidyverse)
 library(knitr)
+library(rsample)
 library(pdp)
 library(rpart)
+library(rpart.plot)
 library(gbm)
 library(randomForest)
 ```
@@ -78,9 +80,7 @@ dengue.gbs = gbm(total_cases ~ specific_humidity + tdtr_k + precipitation_amt,
 
 modelr::rmse(dengue.tree, dengue_test)
 modelr::rmse(dengue.prune, dengue_test)
-
 modelr::rmse(dengue.forest, dengue_test)
-
 modelr::rmse(dengue.gbs, dengue_test)
 
 # Looks like random Forest is the best and better than even the pruned tree by a slim margin
