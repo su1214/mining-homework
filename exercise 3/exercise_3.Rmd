@@ -11,6 +11,10 @@ output:
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 library(tidyverse)
 library(knitr)
+library(pdp)
+library(rpart)
+library(gbm)
+library(randomForest)
 ```
 
 ## What causes what?
@@ -29,7 +33,60 @@ How were the researchers from UPenn able to isolate this effect? Briefly describ
 ## Tree modeling: dengue cases
 
 ```{r}
-dengue = read_csv('dengue.csv')
+dengue = read_csv('dengue.csv') %>% drop_na()
+
+dengue_split = initial_split(dengue, 0.8)
+dengue_train = training(dengue_split)
+dengue_test = testing(dengue_split)
+
+# CART
+dengue.tree = rpart(total_cases ~ season + specific_humidity + tdtr_k + precipitation_amt, 
+                    data=dengue_train,
+                    control = rpart.control(cp = 0.002, minsplit=30))
+
+rpart.plot(dengue.tree, digits=-5, type=4, extra=1)
+
+cp_1se = function(my_tree) {
+  out = as.data.frame(my_tree$cptable)
+  thresh = min(out$xerror + out$xstd)
+  cp_opt = max(out$CP[out$xerror <= thresh])
+  cp_opt
+}
+
+cp_1se(dengue.tree)
+
+prune_1se = function(my_tree) {
+  out = as.data.frame(my_tree$cptable)
+  thresh = min(out$xerror + out$xstd)
+  cp_opt = max(out$CP[out$xerror <= thresh])
+  prune(my_tree, cp=cp_opt)
+}
+
+dengue.prune = prune_1se(dengue.tree)
+
+# Random Forest
+dengue.forest = randomForest(total_cases ~ season + specific_humidity + tdtr_k + precipitation_amt, 
+                    data=dengue_train,
+                    importance = TRUE, na.action=na.omit)
+
+plotcp(dengue.tree)
+
+# Gradient Boosting
+dengue.gbs = gbm(total_cases ~ specific_humidity + tdtr_k + precipitation_amt, 
+                    data=dengue_train, distribution = "gaussian",n.trees = 10000,
+                  shrinkage = 0.01, interaction.depth = 4)
+
+modelr::rmse(dengue.tree, dengue_test)
+modelr::rmse(dengue.prune, dengue_test)
+
+modelr::rmse(dengue.forest, dengue_test)
+
+modelr::rmse(dengue.gbs, dengue_test)
+
+# Looks like random Forest is the best and better than even the pruned tree by a slim margin
+partialPlot(dengue.forest, as.data.frame(dengue_test), 'specific_humidity', las=1)
+partialPlot(dengue.forest, as.data.frame(dengue_test), 'precipitation_amt', las=1)
+partialPlot(dengue.forest, as.data.frame(dengue_test), 'tdtr_k', las=1)
 ```
 
 ## Predictive model building: green certification
