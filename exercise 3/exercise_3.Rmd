@@ -99,6 +99,57 @@ partialPlot(dengue.forest, as.data.frame(dengue_test), 'tdtr_k', las=1)
 ```{r}
 greenbuildings = read_csv("greenbuildings.csv")
 
+greenbuildings = greenbuildings %>% mutate(green_certified = LEED | Energystar ) %>% mutate(revenue = leasing_rate*Rent)
+
+# Splitting the data into testing and training
+greenbuildings_split = initial_split(greenbuildings, 0.8)
+green_train = training(greenbuildings_split)
+green_test = testing(greenbuildings_split)
+
+# Linear Regression
+green_lm = lm(revenue ~ ., data=green_train)
+modelr::rmse(green_lm, green_test)
+
+# Variable Selection stepwise
+green_forward = step(green_lm, direction='forward',
+                     scope=~(.)^2)
+modelr::rmse(green_forward, green_test)
+
+# Trees
+green.tree = rpart(revenue ~ ., 
+                    data=green_train,
+                    control = rpart.control(cp = 0.002, minsplit=30))
+modelr::rmse(green.tree, green_test)
+
+# Tree with pruning
+cp_1se = function(my_tree) {
+  out = as.data.frame(my_tree$cptable)
+  thresh = min(out$xerror + out$xstd)
+  cp_opt = max(out$CP[out$xerror <= thresh])
+  cp_opt
+}
+
+cp_1se(green.tree)
+
+prune_1se = function(my_tree) {
+  out = as.data.frame(my_tree$cptable)
+  thresh = min(out$xerror + out$xstd)
+  cp_opt = max(out$CP[out$xerror <= thresh])
+  prune(my_tree, cp=cp_opt)
+}
+
+green.prune = prune_1se(green.tree)
+
+modelr::rmse(green.prune, green_test)
+
+# Random Forest
+green.forest = randomForest(revenue ~ ., 
+                    data=green_train,
+                    importance = TRUE, na.action=na.omit)
+modelr::rmse(green.forest, green_test)
+
+
+partialPlot(green.forest, as.data.frame(green_test), 'green_certified', las=1)
 ```
 
 
