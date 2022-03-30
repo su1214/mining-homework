@@ -113,8 +113,33 @@ green_test = testing(greenbuildings_split)
 green_lm = lm(revenue ~ . - LEED - Energystar - leasing_rate - Rent, data=green_train)
 
 # Variable Selection stepwise
-green_step = step(green_lm, direction = 'forward',
-                  scope = ~(. - LEED - Energystar - leasing_rate - Rent)^2)
+#green_step = step(green_lm, direction = 'forward',
+#                  scope = ~(. - LEED - Energystar - leasing_rate - Rent)^2)
+# stepwise function chose the following model
+green_step = lm(formula = revenue ~ CS_PropertyID + cluster + size + empl_gr + 
+    stories + age + renovated + class_a + class_b + green_rating + 
+    net + amenities + cd_total_07 + hd_total07 + total_dd_07 + 
+    Precipitation + Gas_Costs + Electricity_Costs + City_Market_Rent + 
+    green_certified + size:City_Market_Rent + CS_PropertyID:City_Market_Rent + 
+    size:Precipitation + stories:class_a + size:Gas_Costs + cluster:City_Market_Rent + 
+    green_rating:amenities + cd_total_07:hd_total07 + age:City_Market_Rent + 
+    age:total_dd_07 + renovated:Precipitation + cluster:size + 
+    CS_PropertyID:total_dd_07 + Electricity_Costs:City_Market_Rent + 
+    renovated:Gas_Costs + CS_PropertyID:Precipitation + stories:renovated + 
+    age:class_b + hd_total07:total_dd_07 + CS_PropertyID:empl_gr + 
+    size:green_rating + size:class_b + size:class_a + size:age + 
+    age:Electricity_Costs + renovated:City_Market_Rent + renovated:total_dd_07 + 
+    class_a:City_Market_Rent + amenities:Electricity_Costs + 
+    CS_PropertyID:cd_total_07 + size:renovated + empl_gr:Gas_Costs + 
+    CS_PropertyID:class_b + CS_PropertyID:class_a + CS_PropertyID:size + 
+    class_a:Gas_Costs + CS_PropertyID:Electricity_Costs + CS_PropertyID:cluster + 
+    class_a:hd_total07 + class_a:Electricity_Costs + age:class_a + 
+    class_a:Precipitation + empl_gr:renovated + cluster:Electricity_Costs + 
+    cluster:hd_total07 + size:cd_total_07 + stories:cd_total_07 + 
+    size:Electricity_Costs + age:Gas_Costs + class_b:Gas_Costs + 
+    stories:age + renovated:Electricity_Costs + cd_total_07:total_dd_07 + 
+    age:cd_total_07 + hd_total07:Electricity_Costs + stories:Precipitation + 
+    amenities:Gas_Costs + amenities:Precipitation, data = green_train)
 
 # Trees
 green.tree = rpart(revenue ~ . - LEED - Energystar - leasing_rate - Rent, 
