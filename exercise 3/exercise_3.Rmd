@@ -99,7 +99,7 @@ partialPlot(dengue.forest, as.data.frame(dengue_test), 'tdtr_k', las=1)
 ```{r}
 greenbuildings = read_csv("greenbuildings.csv")
 
-greenbuildings = greenbuildings %>% mutate(green_certified = LEED | Energystar ) %>% mutate(revenue = leasing_rate*Rent)
+greenbuildings = greenbuildings %>% mutate(green_certified = ifelse(LEED | Energystar, 1, 0) ) %>% mutate(revenue = leasing_rate*Rent)
 
 # Splitting the data into testing and training
 greenbuildings_split = initial_split(greenbuildings, 0.8)
@@ -156,7 +156,9 @@ partialPlot(green.forest, as.data.frame(green_test), 'green_certified', las=1)
 ## Predictive model building: California housing
 
 ```{r}
+library(ggmap)
 CAhousing = read_csv("CAhousing.csv")
+CAmap = get_map("california", zoom=4)
 ```
 
 The model does the prediction pretty well. It only got `r abs(as.integer(hotels_final[21, 3]))` predictions wrong in total out of 4999 observations though if you look at each folds individually there is a difference as in sometimes we have negative and sometimes positive values, but in total it all averages out to `r abs(as.integer(hotels_final[21, 3]))`. 
