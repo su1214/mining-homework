@@ -17,6 +17,7 @@ library(rpart)
 library(rpart.plot)
 library(gbm)
 library(randomForest)
+library(ggmap)
 ```
 
 ## What causes what?
@@ -159,7 +160,77 @@ partialPlot(green.forest, as.data.frame(green_test), 'green_certified', las=1)
 library(ggmap)
 CAhousing = read_csv("CAhousing.csv")
 CAmap = get_map("california", zoom=4)
+
+CAhousing_split = initial_split(CAhousing, 0.8)
+CAhousing_train = training(CAhousing_split)
+CAhousing_test = testing(CAhousing_split)
+
+# Linear Regression
+CAhousing_lm = lm(medianHouseValue ~ . - longitude - latitude, data=CAhousing_train)
+
+# Stepwise
+CAhousing_step = step(CAhousing_lm, scope=~(.)^2)
+
+# CART
+CAhousing.tree = rpart(medianHouseValue ~ housingMedianAge + totalRooms + 
+                      totalBedrooms + population + households + medianIncome, 
+                    data=CAhousing_train,
+                    control = rpart.control(cp = 0.002, minsplit=30))
+
+#rpart.plot(CAhousing.tree, digits=-5, type=4, extra=1)
+
+cp_1se(CAhousing.tree)
+
+CAhousing.prune = prune_1se(CAhousing.tree)
+
+# Random Forest
+CAhousing.forest = randomForest(medianHouseValue ~ housingMedianAge + totalRooms + 
+                      totalBedrooms + population + households + medianIncome, 
+                    data=CAhousing_train,
+                    importance = TRUE, na.action=na.omit)
+
+#plotcp(CAhousing.tree)
+
+# Gradient Boosting
+CAhousing.gbs = gbm(medianHouseValue ~ housingMedianAge + totalRooms + 
+                      totalBedrooms + population + households + medianIncome, 
+                    data=CAhousing_train, distribution = "gaussian", n.trees = 10000,
+                  shrinkage = 0.01, interaction.depth = 4)
+
+CAhousing_rmse = data.frame(
+modelr::rmse(CAhousing_lm, CAhousing_test),
+modelr::rmse(CAhousing_step, CAhousing_test),
+modelr::rmse(CAhousing.tree, CAhousing_test),
+modelr::rmse(CAhousing.prune, CAhousing_test),
+modelr::rmse(CAhousing.forest, CAhousing_test),
+modelr::rmse(CAhousing.gbs, CAhousing_test))
+colnames(CAhousing_rmse) = c("Linear", "Stepwise", "Tree", "Pruned Tree", "Forest", "GBS")
+rownames(CAhousing_rmse) = "RMSE"
+kable(CAhousing_rmse)
+#proceed with GBS model
 ```
 
-The model does the prediction pretty well. It only got `r abs(as.integer(hotels_final[21, 3]))` predictions wrong in total out of 4999 observations though if you look at each folds individually there is a difference as in sometimes we have negative and sometimes positive values, but in total it all averages out to `r abs(as.integer(hotels_final[21, 3]))`. 
+```{r}
+CAmap = get_map("california", zoom=6)
+ggmap(CAmap) + 
+  geom_point(aes(x = longitude, y = latitude, color = medianHouseValue), data = CAhousing, alpha = .4) +
+  labs(x = 'Longitude', y = 'Latitude', title = "",
+       subtitle = '')
+```
+
+```{r}
+CApredict = CAhousing %>% mutate(predictedMedianHouseValue = predict.gbm(CAhousing.gbs, newdata = CAhousing))
+ggmap(CAmap) + 
+  geom_point(aes(x = longitude, y = latitude, color = predictedMedianHouseValue), data = CApredict, alpha = .4) +
+  labs(x = 'Longitude', y = 'Latitude', title = "",
+       subtitle = '')
+```
+
+```{r}
+CApredict = CApredict %>% mutate(residuals = medianHouseValue - predictedMedianHouseValue)
+ggmap(CAmap) + 
+  geom_point(aes(x = longitude, y = latitude, color = residuals), data = CApredict, alpha = .4) +
+  labs(x = 'Longitude', y = 'Latitude', title = "",
+       subtitle = '')
+```
 
