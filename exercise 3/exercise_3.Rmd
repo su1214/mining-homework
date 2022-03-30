@@ -17,7 +17,9 @@ library(rpart)
 library(rpart.plot)
 library(gbm)
 library(randomForest)
+library(foreach)
 library(ggmap)
+library(caret)
 ```
 
 ## What causes what?
@@ -52,7 +54,7 @@ dengue.tree = rpart(total_cases ~ season + specific_humidity + tdtr_k + precipit
                     data=dengue_train,
                     control = rpart.control(cp = 0.002, minsplit=30))
 
-rpart.plot(dengue.tree, digits=-5, type=4, extra=1)
+# rpart.plot(dengue.tree, digits=-5, type=4, extra=1)
 
 cp_1se = function(my_tree) {
   out = as.data.frame(my_tree$cptable)
@@ -61,7 +63,7 @@ cp_1se = function(my_tree) {
   cp_opt
 }
 
-cp_1se(dengue.tree)
+# cp_1se(dengue.tree)
 
 prune_1se = function(my_tree) {
   out = as.data.frame(my_tree$cptable)
@@ -77,7 +79,7 @@ dengue.forest = randomForest(total_cases ~ season + specific_humidity + tdtr_k +
                     data=dengue_train,
                     importance = TRUE, na.action=na.omit)
 
-plotcp(dengue.tree)
+# plotcp(dengue.tree)
 
 # Gradient Boosting
 dengue.gbs = gbm(total_cases ~ season + specific_humidity + tdtr_k + precipitation_amt, 
@@ -98,7 +100,7 @@ partialPlot(dengue.forest, as.data.frame(dengue_test), 'tdtr_k', las=1)
 ## Predictive model building: green certification
 
 ```{r}
-greenbuildings = read_csv("greenbuildings.csv")
+greenbuildings = read.csv("greenbuildings.csv") %>% drop_na()
 
 greenbuildings = greenbuildings %>% mutate(green_certified = ifelse(LEED | Energystar, 1, 0) ) %>% mutate(revenue = leasing_rate*Rent)
 
@@ -108,49 +110,55 @@ green_train = training(greenbuildings_split)
 green_test = testing(greenbuildings_split)
 
 # Linear Regression
-green_lm = lm(revenue ~ ., data=green_train)
-modelr::rmse(green_lm, green_test)
+green_lm = lm(revenue ~ . - LEED - Energystar - leasing_rate - Rent, data=green_train)
 
 # Variable Selection stepwise
-green_forward = step(green_lm, direction='forward',
-                     scope=~(.)^2)
-modelr::rmse(green_forward, green_test)
+green_step = step(green_lm, direction = 'forward',
+                  scope = ~(. - LEED - Energystar - leasing_rate - Rent)^2)
 
 # Trees
-green.tree = rpart(revenue ~ ., 
+green.tree = rpart(revenue ~ . - LEED - Energystar - leasing_rate - Rent, 
                     data=green_train,
                     control = rpart.control(cp = 0.002, minsplit=30))
-modelr::rmse(green.tree, green_test)
 
 # Tree with pruning
-cp_1se = function(my_tree) {
-  out = as.data.frame(my_tree$cptable)
-  thresh = min(out$xerror + out$xstd)
-  cp_opt = max(out$CP[out$xerror <= thresh])
-  cp_opt
-}
-
-cp_1se(green.tree)
-
-prune_1se = function(my_tree) {
-  out = as.data.frame(my_tree$cptable)
-  thresh = min(out$xerror + out$xstd)
-  cp_opt = max(out$CP[out$xerror <= thresh])
-  prune(my_tree, cp=cp_opt)
-}
-
+# cp_1se(green.tree)
 green.prune = prune_1se(green.tree)
 
-modelr::rmse(green.prune, green_test)
-
 # Random Forest
-green.forest = randomForest(revenue ~ ., 
+green.forest = randomForest(revenue ~ . - LEED - Energystar - leasing_rate - Rent, 
                     data=green_train,
                     importance = TRUE, na.action=na.omit)
-modelr::rmse(green.forest, green_test)
 
+# Gradient Boosting
+green.gbs = gbm(revenue ~ . - LEED - Energystar - leasing_rate - Rent, 
+                    data=green_train, distribution = "gaussian", n.trees = 10000,
+                  shrinkage = 0.01, interaction.depth = 4)
 
-partialPlot(green.forest, as.data.frame(green_test), 'green_certified', las=1)
+# knn model
+k_grid = seq(300,495, by=5)
+
+green_knn_grid = foreach(k = k_grid, .combine='rbind') %do% {
+  model = knnreg(revenue ~ . - LEED - Energystar - leasing_rate - Rent, k=k, data = green_train)
+  rms = modelr::rmse(model, green_test)
+  c(k=k, err=rms)
+} %>% as.data.frame
+
+green_knn_final = green_knn_grid %>% filter(err == min(green_knn_grid$err))
+
+green_rmse = data.frame(
+modelr::rmse(green_lm, green_test),
+modelr::rmse(green_step, green_test),
+modelr::rmse(green.tree, green_test),
+modelr::rmse(green.prune, green_test),
+modelr::rmse(green.forest, green_test),
+modelr::rmse(green.gbs, green_test),
+green_knn_final$err)
+colnames(green_rmse) = c("Linear", "Stepwise", "Tree", "Pruned Tree", "Forest", "GBS", "knn")
+rownames(green_rmse) = "RMSE"
+kable(green_rmse)
+
+#partialPlot(green.forest, as.data.frame(green_test), 'green_certified', las=1)
 ```
 
 
@@ -169,7 +177,7 @@ CAhousing_test = testing(CAhousing_split)
 CAhousing_lm = lm(medianHouseValue ~ . - longitude - latitude, data=CAhousing_train)
 
 # Stepwise
-CAhousing_step = step(CAhousing_lm, scope=~(.)^2)
+CAhousing_step = step(CAhousing_lm, scope=~(. - longitude - latitude)^2)
 
 # CART
 CAhousing.tree = rpart(medianHouseValue ~ housingMedianAge + totalRooms + 
