@@ -402,8 +402,6 @@ compared to a non green_certified building.
 ```{r}
 #partialPlot(green.forest, as.data.frame(green_test), 'green_certified', las=1)
 green_test = green_test %>% mutate(predicted = predict(green.gbs, newdata = green_test, type = 'response'))
-filter(green_test, green_certified == 1)[, 'revenue'] %>% mean - 
-filter(green_test, green_certified == 0)[, 'revenue'] %>% mean
 ```
 
 ## Predictive model building: California housing

@@ -167,8 +167,6 @@ certification. On average, a green_certified building generates
 193.2565864 dollars more in revenue, per square foot per year, compared
 to a non green_certified building.
 
-    ## [1] 193.2566
-
 ## Predictive model building: California housing
 
 We start by splitting the dataset into training and testing set.
