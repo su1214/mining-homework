@@ -309,7 +309,7 @@ colnames(green_forest_rmse) = c("Random Forest 1", "Random Forest 2", "Random Fo
 rownames(green_forest_rmse) = "RMSE"
 kable(green_forest_rmse)
 
-green.forest = randomForest(revenue ~ ., 
+green.forest = randomForest(revenue ~ . - LEED - Energystar, 
                     data=green_train,
                     importance = TRUE, na.action=na.omit)
 ```
@@ -341,7 +341,7 @@ colnames(green_gbm_rmse) = c("Boosted 1", "Boosted 2", "Boosted 3")
 rownames(green_gbm_rmse) = "RMSE"
 kable(green_gbm_rmse)
 
-green.gbs = gbm(revenue ~ ., 
+green.gbs = gbm(revenue ~ . - LEED - Energystar, 
                     data=green_train, distribution = "gaussian", n.trees = 10000,
                   shrinkage = 0.01, interaction.depth = 4, cv.folds = 5)
 ```
@@ -419,28 +419,11 @@ CAhousing_lm = lm(medianHouseValue ~ . - longitude - latitude, data=CAhousing_tr
 CAhousing_step = step(CAhousing_lm, scope=~(. - longitude - latitude)^2, trace=0)
 
 # CART
-CAhousing.tree = rpart(medianHouseValue ~ housingMedianAge + totalRooms + 
-                      totalBedrooms + population + households + medianIncome, 
-                    data=CAhousing_train,
-                    control = rpart.control(cp = 0.002, minsplit=30))
-
-#rpart.plot(CAhousing.tree, digits=-5, type=4, extra=1)
-
-CAhousing.prune = prune_1se(CAhousing.tree)
-```
-
-```{r}
-# Random Forest
-CAhousing.forest = randomForest(medianHouseValue ~ housingMedianAge + totalRooms + 
-                      totalBedrooms + population + households + medianIncome, 
-                    data=CAhousing_train,
-                    importance = TRUE, na.action=na.omit)
-
 trctrl = trainControl(method = "cv", number = 5, savePredictions=TRUE)
-CAhouse_tree1 = train(medianHouseValue ~., data = CAhousing_train, method = "rf", trControl=trctrl, tuneLength = 1)
+CAhouse_tree1 = train(medianHouseValue ~., data = CAhousing_train, method = "rpart", trControl=trctrl, tuneLength = 1)
 CAhouse_tree2 = train(medianHouseValue ~ housingMedianAge + totalRooms + 
                       totalBedrooms + population + households + medianIncome, 
-                    data=CAhousing_train, method = "rf", trControl=trctrl, tuneLength = 1)
+                    data=CAhousing_train, method = "rpart", trControl=trctrl, tuneLength = 1)
 
 CAhouse_tree_rmse = data.frame(
 CAhouse_tree1$results$RMSE,
@@ -450,28 +433,69 @@ colnames(CAhouse_tree_rmse) = c("Tree 1", "Tree 2")
 rownames(CAhouse_tree_rmse) = "RMSE"
 kable(CAhouse_tree_rmse)
 
-#plotcp(CAhousing.tree)
+CAhousing.tree = rpart(medianHouseValue ~ ., 
+                    data=CAhousing_train,
+                    control = rpart.control(cp = 0.002, minsplit=30))
+
+CAhousing.prune = prune_1se(CAhousing.tree)
+
+```
+
+```{r}
+# Random Forest
+trctrl = trainControl(method = "cv", number = 5, savePredictions=TRUE)
+CAhouse_rf1 = train(medianHouseValue ~., data = CAhousing_train, method = "rf", trControl=trctrl, tuneLength = 1)
+CAhouse_rf2 = train(medianHouseValue ~ housingMedianAge + totalRooms + 
+                      totalBedrooms + population + households + medianIncome, 
+                    data=CAhousing_train, method = "rf", trControl=trctrl, tuneLength = 1)
+
+CAhouse_rf_rmse = data.frame(
+CAhouse_rf1$results$RMSE,
+CAhouse_rf2$results$RMSE
+)
+colnames(CAhouse_rf_rmse) = c("Random Forest 1", "Random Forest 2")
+rownames(CAhouse_rf_rmse) = "RMSE"
+kable(CAhouse_rf_rmse)
+
+CAhousing.forest = randomForest(medianHouseValue ~ .,
+                    data=CAhousing_train,
+                    importance = TRUE, na.action=na.omit)
 ```
 
 ```{r}
 # Gradient Boosting
-CAhousing.gbs = gbm(medianHouseValue ~ housingMedianAge + totalRooms + 
+CAhousing_gbm1 = gbm(medianHouseValue ~ ., 
+                    data=CAhousing_train, distribution = "gaussian", n.trees = 10000,
+                  shrinkage = 0.01, interaction.depth = 4, cv.folds = 5)
+CAhousing_gbm2 = gbm(medianHouseValue ~ housingMedianAge + totalRooms + 
                       totalBedrooms + population + households + medianIncome, 
                     data=CAhousing_train, distribution = "gaussian", n.trees = 10000,
-                  shrinkage = 0.01, interaction.depth = 4)
+                  shrinkage = 0.01, interaction.depth = 4, cv.folds = 5)
 
+CAhousing_gbm_rmse = data.frame(
+CAhousing_gbm1$cv.error %>% mean %>% sqrt,
+CAhousing_gbm2$cv.error %>% mean %>% sqrt,
+)
+colnames(CAhousing_gbm_rmse) = c("Boosted 1", "Boosted 2")
+rownames(CAhousing_gbm_rmse) = "RMSE"
+kable(CAhousing_gbm_rmse)
+```
+
+
+```{r}
 CAhousing_rmse = data.frame(
 modelr::rmse(CAhousing_lm, CAhousing_test),
 modelr::rmse(CAhousing_step, CAhousing_test),
 modelr::rmse(CAhousing.tree, CAhousing_test),
 modelr::rmse(CAhousing.prune, CAhousing_test),
 modelr::rmse(CAhousing.forest, CAhousing_test),
-modelr::rmse(CAhousing.gbs, CAhousing_test))
+modelr::rmse(CAhousing_gbs1, CAhousing_test))
 colnames(CAhousing_rmse) = c("Linear", "Stepwise", "Tree", "Pruned Tree", "Forest", "GBM")
 rownames(CAhousing_rmse) = "RMSE"
 kable(CAhousing_rmse)
 #proceed with GBM model
 ```
+
 We start by splitting the dataset into training and testing set. Training set takes 80% of the dataset and rest going to the testing set. In terms of the model selection, we started with a linear model to select the statistically significant variables. Then we created a stepwise selection model with all the variables except latitude and longitude in the scope, After this we built a tree model with `housingMedianAge, totalRooms, totalBedrooms, population, households, medianIncome` variables. Also pruned this model to check if it produces a better model. It turned out that pruned tree was not better than the tree model. We created a Random forest model with the same variables as the tree model which performed way better than any model that we created till now. In the end we created a gradient boosted model with the same variables which performed slightly better than the random forest model.
 
 So we choose the gradient boosted model that has `housingMedianAge`, `totalRooms`, `totalBedrooms`, `population`, `households`, and `medianIncome` as the features. The plots are below.
