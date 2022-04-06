@@ -26,8 +26,6 @@ library(caret)
 
 1. You can't just get data from a few different cities and run the regressions of “Crime” on “Police” because cities have incentives to hire more cops when there is an increased number of crimes. Because of this, it would look like “Crime” is positively correlated to “Police” when there is no reason to believe there is a causal relationship.
 
-How were the researchers from UPenn able to isolate this effect? Briefly describe their approach and discuss their result in the “Table 2” below, from the researchers' paper.
-
 2. The researchers from UPenn were able to isolate this effect because the District of Columbia had the policy where they increased  “Police” when there is an increased risk of terrorism, which is believed to be unrelated to the street crime rates. The result in the “Table 2” below says that there is a statistically significant negative relationship between the “High Alert” and “Crime”, implying that the increased number of cops because of the possible terrorist risk decreased the crime rates. This holds true even after controlling for the ridership of Metro.
 
 3. They had to control for Metro ridership because, if “Crime” decreased because there were less people on the streets, that would not neccesarily mean the rate of crime decreasing because of the increased number of cops. This would be of concern if people stayed home because of the terrorist alert. However, it did not turn out to be true. They were trying to capture the effect of the decrease of normal human activity in the city on the number of crime incidents.
@@ -178,36 +176,36 @@ green_test = testing(greenbuildings_split)
 
 We started modeling with combining the LEED and EnergyStar to create a green_certified 
 column, which is a dummy variable that is 1 if green certified in any form and 0 otherwise.
-Also, we removed the nulls. Then ,we created a train/test split with 80 percent
+Also, we removed the nulls. Then, we created a train/test split with 80 percent
 of the data being the training set data and 20 percent being the testing set data.
+In the analysis, we do not use `CS_PropertyID` variable as it is just the unique id's for each property.
 
 ```{r}
 # Linear Regression
-green_lm = lm(revenue ~ . - LEED - Energystar - leasing_rate - Rent, data=green_train)
+green_lm = lm(revenue ~ . - LEED - Energystar - leasing_rate - Rent - CS_PropertyID, data=green_train)
 
-green_lm_wo = lm(revenue ~ . - LEED - Energystar, data=green_train)
+green_lm_wo = lm(revenue ~ . - LEED - Energystar - CS_PropertyID, data=green_train)
 
 # Variable Selection stepwise
 #green_step = step(green_lm, direction = 'forward',
-#                  scope = ~(. - LEED - Energystar - leasing_rate - Rent)^2)
+#                  scope = ~(. - LEED - Energystar - leasing_rate - Rent - CS_PropertyID)^2)
 # stepwise function chose the following model
-green_step = lm(formula = revenue ~ CS_PropertyID + cluster + size + empl_gr + 
+green_step = lm(formula = revenue ~ cluster + size + empl_gr + 
     stories + age + renovated + class_a + class_b + green_rating + 
     net + amenities + cd_total_07 + hd_total07 + total_dd_07 + 
     Precipitation + Gas_Costs + Electricity_Costs + City_Market_Rent + 
-    green_certified + size:City_Market_Rent + CS_PropertyID:City_Market_Rent + 
+    green_certified + size:City_Market_Rent + 
     size:Precipitation + stories:class_a + size:Gas_Costs + cluster:City_Market_Rent + 
     green_rating:amenities + cd_total_07:hd_total07 + age:City_Market_Rent + 
     age:total_dd_07 + renovated:Precipitation + cluster:size + 
-    CS_PropertyID:total_dd_07 + Electricity_Costs:City_Market_Rent + 
-    renovated:Gas_Costs + CS_PropertyID:Precipitation + stories:renovated + 
-    age:class_b + hd_total07:total_dd_07 + CS_PropertyID:empl_gr + 
+    Electricity_Costs:City_Market_Rent + 
+    renovated:Gas_Costs + stories:renovated + 
+    age:class_b + hd_total07:total_dd_07 + 
     size:green_rating + size:class_b + size:class_a + size:age + 
     age:Electricity_Costs + renovated:City_Market_Rent + renovated:total_dd_07 + 
     class_a:City_Market_Rent + amenities:Electricity_Costs + 
-    CS_PropertyID:cd_total_07 + size:renovated + empl_gr:Gas_Costs + 
-    CS_PropertyID:class_b + CS_PropertyID:class_a + CS_PropertyID:size + 
-    class_a:Gas_Costs + CS_PropertyID:Electricity_Costs + CS_PropertyID:cluster + 
+    size:renovated + empl_gr:Gas_Costs + 
+    class_a:Gas_Costs + 
     class_a:hd_total07 + class_a:Electricity_Costs + age:class_a + 
     class_a:Precipitation + empl_gr:renovated + cluster:Electricity_Costs + 
     cluster:hd_total07 + size:cd_total_07 + stories:cd_total_07 + 
@@ -221,23 +219,22 @@ In terms of the types of models, we started with a baseline linear regression mo
 revenue on everything else. 
 After that, using the stepwise variable selection function, we computed the best set of variables and the
 interaction between them which performed the best. The linear model chose by the stepwise function is 
-`revenue ~ CS_PropertyID + cluster + size + empl_gr + 
+`revenue ~ cluster + size + empl_gr + 
     stories + age + renovated + class_a + class_b + green_rating + 
     net + amenities + cd_total_07 + hd_total07 + total_dd_07 + 
     Precipitation + Gas_Costs + Electricity_Costs + City_Market_Rent + 
-    green_certified + size:City_Market_Rent + CS_PropertyID:City_Market_Rent + 
+    green_certified + size:City_Market_Rent + 
     size:Precipitation + stories:class_a + size:Gas_Costs + cluster:City_Market_Rent + 
     green_rating:amenities + cd_total_07:hd_total07 + age:City_Market_Rent + 
     age:total_dd_07 + renovated:Precipitation + cluster:size + 
-    CS_PropertyID:total_dd_07 + Electricity_Costs:City_Market_Rent + 
-    renovated:Gas_Costs + CS_PropertyID:Precipitation + stories:renovated + 
-    age:class_b + hd_total07:total_dd_07 + CS_PropertyID:empl_gr + 
+    Electricity_Costs:City_Market_Rent + 
+    renovated:Gas_Costs + :Precipitation + stories:renovated + 
+    age:class_b + hd_total07:total_dd_07 + 
     size:green_rating + size:class_b + size:class_a + size:age + 
     age:Electricity_Costs + renovated:City_Market_Rent + renovated:total_dd_07 + 
     class_a:City_Market_Rent + amenities:Electricity_Costs + 
-    CS_PropertyID:cd_total_07 + size:renovated + empl_gr:Gas_Costs + 
-    CS_PropertyID:class_b + CS_PropertyID:class_a + CS_PropertyID:size + 
-    class_a:Gas_Costs + CS_PropertyID:Electricity_Costs + CS_PropertyID:cluster + 
+    size:renovated + empl_gr:Gas_Costs + 
+    class_a:Gas_Costs + 
     class_a:hd_total07 + class_a:Electricity_Costs + age:class_a + 
     class_a:Precipitation + empl_gr:renovated + cluster:Electricity_Costs + 
     cluster:hd_total07 + size:cd_total_07 + stories:cd_total_07 + 
@@ -252,8 +249,8 @@ Next, we experimented with a tree model by considering all the variables except 
 because LEED and Energystar is already considered under the green_certified (tree 3).
 We then constructed 2 more tree models, one having all the variables and the other 
 one without leasing_rate, Rent, LEED and Energystar as features (tree 1 and 2).
-The specifications are `revenue ~ .`, `revenue ~ . - LEED - Energystar - leasing_rate - Rent`, and
-`revenue ~ . - LEED - Energystar` for each model 1, 2, and 3.
+The specifications are `revenue ~ . - CS_PropertyID`, `revenue ~ . - LEED - Energystar - leasing_rate - Rent - CS_PropertyID`, and
+`revenue ~ . - LEED - Energystar - CS_PropertyID` for each model 1, 2, and 3.
 We compared the three models with cross validated in-sample rMSE's with the fold of 5.
 The table for the rMSE's are below. As the one that takes all the variables into account has the 
 lowest rMSE, we choose this model to take to the final decision.
@@ -262,10 +259,10 @@ We then also pruned the tree to see if this would increase the performance.
 ```{r}
 # Trees
 trctrl = trainControl(method = "cv", number = 5, savePredictions=TRUE)
-green_tree1 = train(revenue ~ ., data = green_train, method = "rpart", trControl=trctrl, tuneLength = 0)
-green_tree2 = train(revenue ~ . - LEED - Energystar - leasing_rate - Rent,
+green_tree1 = train(revenue ~ . - CS_PropertyID, data = green_train, method = "rpart", trControl=trctrl, tuneLength = 0)
+green_tree2 = train(revenue ~ . - LEED - Energystar - leasing_rate - Rent - CS_PropertyID,
       data = green_train, method = "rpart", trControl=trctrl, tuneLength = 0)
-green_tree3 = train(revenue ~ . - LEED - Energystar,
+green_tree3 = train(revenue ~ . - LEED - Energystar - CS_PropertyID,
       data = green_train, method = "rpart", trControl=trctrl, tuneLength = 0)
 
 green_tree_rmse = data.frame(
@@ -277,7 +274,7 @@ colnames(green_tree_rmse) = c("Tree 1", "Tree 2", "Tree 3")
 rownames(green_tree_rmse) = "RMSE"
 kable(green_tree_rmse)
 
-green.tree = rpart(revenue ~ . - LEED - Energystar, 
+green.tree = rpart(revenue ~ . - LEED - Energystar - CS_PropertyID, 
                     data=green_train,
                     control = rpart.control(cp = 0.002, minsplit=30))
 
@@ -285,8 +282,8 @@ green.prune = prune_1se(green.tree)
 ```
 
 For random forest models, we also started with three models that utilize different features as in choosing the tree model.
-The specifications are `revenue ~ .`, `revenue ~ . - LEED - Energystar - leasing_rate - Rent`, and
-`revenue ~ . - LEED - Energystar` for each model 1, 2, and 3.
+The specifications are `revenue ~ . - CS_PropertyID`, `revenue ~ . - LEED - Energystar - leasing_rate - Rent - CS_PropertyID`, and
+`revenue ~ . - LEED - Energystar - CS_PropertyID` for each model 1, 2, and 3.
 Out of the three models, the model which had all the variables performed
 the best during cross-validated in-sample performance test.
 The table for the rMSE's for each forest model is below.
@@ -294,10 +291,10 @@ The table for the rMSE's for each forest model is below.
 ```{r}
 # Random Forest
 trctrl = trainControl(method = "cv", number = 5, savePredictions=TRUE)
-green_forest1 = train(revenue ~., data = green_train, method = "rf", trControl=trctrl, prox=TRUE, tuneLength=1)
-green_forest2 = train(revenue ~ . - LEED - Energystar - leasing_rate - Rent,
+green_forest1 = train(revenue ~. - CS_PropertyID, data = green_train, method = "rf", trControl=trctrl, prox=TRUE, tuneLength=1)
+green_forest2 = train(revenue ~ . - LEED - Energystar - leasing_rate - Rent - CS_PropertyID,
       data = green_train, method = "rf", trControl=trctrl, prox=TRUE, tuneLength=1)
-green_forest3 = train(revenue ~ . - LEED - Energystar,
+green_forest3 = train(revenue ~ . - LEED - Energystar - CS_PropertyID,
       data = green_train, method = "rf", trControl=trctrl, prox=TRUE, tuneLength=1)
 
 green_forest_rmse = data.frame(
@@ -309,7 +306,7 @@ colnames(green_forest_rmse) = c("Random Forest 1", "Random Forest 2", "Random Fo
 rownames(green_forest_rmse) = "RMSE"
 kable(green_forest_rmse)
 
-green.forest = randomForest(revenue ~ . - LEED - Energystar, 
+green.forest = randomForest(revenue ~ . - LEED - Energystar - CS_PropertyID, 
                     data=green_train,
                     importance = TRUE, na.action=na.omit)
 ```
@@ -323,12 +320,12 @@ The table for the rMSE's for each boosted model is below.
 
 ```{r}
 # Gradient Boosting
-green_gbm1 = gbm(revenue ~., data = green_train, distribution = "gaussian", n.trees = 10000,
+green_gbm1 = gbm(revenue ~. - CS_PropertyID, data = green_train, distribution = "gaussian", n.trees = 10000,
                   shrinkage = 0.01, interaction.depth = 4, cv.folds = 5)
-green_gbm2 = gbm(revenue ~ . - LEED - Energystar - leasing_rate - Rent,
+green_gbm2 = gbm(revenue ~ . - LEED - Energystar - leasing_rate - Rent - CS_PropertyID,
       data = green_train, distribution = "gaussian", n.trees = 10000,
                   shrinkage = 0.01, interaction.depth = 4, cv.folds = 5)
-green_gbm3 = gbm(revenue ~ . - LEED - Energystar, 
+green_gbm3 = gbm(revenue ~ . - LEED - Energystar - CS_PropertyID, 
                     data=green_train, distribution = "gaussian", n.trees = 10000,
                   shrinkage = 0.01, interaction.depth = 4, cv.folds = 5)
 
@@ -341,7 +338,7 @@ colnames(green_gbm_rmse) = c("Boosted 1", "Boosted 2", "Boosted 3")
 rownames(green_gbm_rmse) = "RMSE"
 kable(green_gbm_rmse)
 
-green.gbs = gbm(revenue ~ . - LEED - Energystar, 
+green.gbs = gbm(revenue ~ . - LEED - Energystar - CS_PropertyID, 
                     data=green_train, distribution = "gaussian", n.trees = 10000,
                   shrinkage = 0.01, interaction.depth = 4, cv.folds = 5)
 ```
@@ -354,10 +351,10 @@ The table for the rMSE's for each boosted model is below.
 ```{r}
 # knn model
 trctrl = trainControl(method = "cv", number = 5, savePredictions=TRUE)
-green_knn1 = train(revenue ~., data = green_train, method = "knn", trControl=trctrl, tuneLength=20)
-green_knn2 = train(revenue ~ . - LEED - Energystar - leasing_rate - Rent,
+green_knn1 = train(revenue ~.- CS_PropertyID, data = green_train, method = "knn", trControl=trctrl, tuneLength=20)
+green_knn2 = train(revenue ~ . - LEED - Energystar - leasing_rate - Rent- CS_PropertyID,
                    data = green_train, method = "knn", trControl=trctrl, tuneLength=20)
-green_knn3 = train(revenue ~ . - LEED - Energystar,
+green_knn3 = train(revenue ~ . - LEED - Energystar- CS_PropertyID,
                    data = green_train, method = "knn", trControl=trctrl, tuneLength=20)
 
 green_knn_rmse = data.frame(matrix(c(
@@ -372,8 +369,13 @@ colnames(green_knn_rmse) = c("knn 1", "knn 2", "knn 3")
 rownames(green_knn_rmse) = c('k', "RMSE")
 kable(green_knn_rmse)
 
-green.knn = knnreg(revenue ~ . - LEED - Energystar - leasing_rate - Rent, k=5, data = green_train)
+green.knn = knnreg(revenue ~ . - LEED - Energystar - leasing_rate - Rent- CS_PropertyID, k=5, data = green_train)
 ```
+
+Finally, we chose tree 3 and knn 3 as it has the lowest in-sample cross-validated RMSE's.
+For the random forest and gradient boosted models, we choose the 3's although 1' perform slightly better.
+This is because we're trying to answer the question of the effect of getting the green certification 
+on the revenue per square foot per calendar year and including the two variables in the model woud dilute the partial dependence.
 
 In the end, we trained the chosen models with all the training data and 
 the out-of sample rmse values. The table for this is below.
@@ -503,7 +505,7 @@ kable(CAhousing_rmse)
 #proceed with GBM model
 ```
 
-Therefore, we choose the gradient boosted model that has all tha variables as the features. 
+Therefore, we choose the gradient boosted model that has all the variables as the features. 
 This makes sense, as the price would be affected by the location of the house. 
 The plots are below.
 

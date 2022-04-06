@@ -81,16 +81,18 @@ and `tdtr_k` below.
 
 We started modeling with combining the LEED and EnergyStar to create a
 green_certified column, which is a dummy variable that is 1 if green
-certified in any form and 0 otherwise. Also, we removed the nulls. Then
-,we created a train/test split with 80 percent of the data being the
-training set data and 20 percent being the testing set data.
+certified in any form and 0 otherwise. Also, we removed the nulls. Then,
+we created a train/test split with 80 percent of the data being the
+training set data and 20 percent being the testing set data. In the
+analysis, we do not use `CS_PropertyID` variable as it is just the
+unique id’s for each property.
 
 In terms of the types of models, we started with a baseline linear
 regression model, with the specification of revenue on everything else.
 After that, using the stepwise variable selection function, we computed
 the best set of variables and the interaction between them which
 performed the best. The linear model chose by the stepwise function is
-`revenue ~ CS_PropertyID + cluster + size + empl_gr +      stories + age + renovated + class_a + class_b + green_rating +      net + amenities + cd_total_07 + hd_total07 + total_dd_07 +      Precipitation + Gas_Costs + Electricity_Costs + City_Market_Rent +      green_certified + size:City_Market_Rent + CS_PropertyID:City_Market_Rent +      size:Precipitation + stories:class_a + size:Gas_Costs + cluster:City_Market_Rent +      green_rating:amenities + cd_total_07:hd_total07 + age:City_Market_Rent +      age:total_dd_07 + renovated:Precipitation + cluster:size +      CS_PropertyID:total_dd_07 + Electricity_Costs:City_Market_Rent +      renovated:Gas_Costs + CS_PropertyID:Precipitation + stories:renovated +      age:class_b + hd_total07:total_dd_07 + CS_PropertyID:empl_gr +      size:green_rating + size:class_b + size:class_a + size:age +      age:Electricity_Costs + renovated:City_Market_Rent + renovated:total_dd_07 +      class_a:City_Market_Rent + amenities:Electricity_Costs +      CS_PropertyID:cd_total_07 + size:renovated + empl_gr:Gas_Costs +      CS_PropertyID:class_b + CS_PropertyID:class_a + CS_PropertyID:size +      class_a:Gas_Costs + CS_PropertyID:Electricity_Costs + CS_PropertyID:cluster +      class_a:hd_total07 + class_a:Electricity_Costs + age:class_a +      class_a:Precipitation + empl_gr:renovated + cluster:Electricity_Costs +      cluster:hd_total07 + size:cd_total_07 + stories:cd_total_07 +      size:Electricity_Costs + age:Gas_Costs + class_b:Gas_Costs +      stories:age + renovated:Electricity_Costs + cd_total_07:total_dd_07 +      age:cd_total_07 + hd_total07:Electricity_Costs + stories:Precipitation +      amenities:Gas_Costs + amenities:Precipitation`.
+`revenue ~ cluster + size + empl_gr +      stories + age + renovated + class_a + class_b + green_rating +      net + amenities + cd_total_07 + hd_total07 + total_dd_07 +      Precipitation + Gas_Costs + Electricity_Costs + City_Market_Rent +      green_certified + size:City_Market_Rent +      size:Precipitation + stories:class_a + size:Gas_Costs + cluster:City_Market_Rent +      green_rating:amenities + cd_total_07:hd_total07 + age:City_Market_Rent +      age:total_dd_07 + renovated:Precipitation + cluster:size +      Electricity_Costs:City_Market_Rent +      renovated:Gas_Costs + :Precipitation + stories:renovated +      age:class_b + hd_total07:total_dd_07 +      size:green_rating + size:class_b + size:class_a + size:age +      age:Electricity_Costs + renovated:City_Market_Rent + renovated:total_dd_07 +      class_a:City_Market_Rent + amenities:Electricity_Costs +      size:renovated + empl_gr:Gas_Costs +      class_a:Gas_Costs +      class_a:hd_total07 + class_a:Electricity_Costs + age:class_a +      class_a:Precipitation + empl_gr:renovated + cluster:Electricity_Costs +      cluster:hd_total07 + size:cd_total_07 + stories:cd_total_07 +      size:Electricity_Costs + age:Gas_Costs + class_b:Gas_Costs +      stories:age + renovated:Electricity_Costs + cd_total_07:total_dd_07 +      age:cd_total_07 + hd_total07:Electricity_Costs + stories:Precipitation +      amenities:Gas_Costs + amenities:Precipitation`.
 We decided to take both models to the final decision where we compare
 the out-of-sample RMSE’s.
 
@@ -99,14 +101,14 @@ except LEED, Energystar because LEED and Energystar is already
 considered under the green_certified (tree 3). We then constructed 2
 more tree models, one having all the variables and the other one without
 leasing_rate, Rent, LEED and Energystar as features (tree 1 and 2). The
-specifications are `revenue ~ .`,
-`revenue ~ . - LEED - Energystar - leasing_rate - Rent`, and
-`revenue ~ . - LEED - Energystar` for each model 1, 2, and 3. We
-compared the three models with cross validated in-sample rMSE’s with the
-fold of 5. The table for the rMSE’s are below. As the one that takes all
-the variables into account has the lowest rMSE, we choose this model to
-take to the final decision. We then also pruned the tree to see if this
-would increase the performance.
+specifications are `revenue ~ . - CS_PropertyID`,
+`revenue ~ . - LEED - Energystar - leasing_rate - Rent - CS_PropertyID`,
+and `revenue ~ . - LEED - Energystar - CS_PropertyID` for each model 1,
+2, and 3. We compared the three models with cross validated in-sample
+rMSE’s with the fold of 5. The table for the rMSE’s are below. As the
+one that takes all the variables into account has the lowest rMSE, we
+choose this model to take to the final decision. We then also pruned the
+tree to see if this would increase the performance.
 
 |      |   Tree 1 |   Tree 2 |   Tree 3 |
 |:-----|---------:|---------:|---------:|
@@ -114,15 +116,16 @@ would increase the performance.
 
 For random forest models, we also started with three models that utilize
 different features as in choosing the tree model. The specifications are
-`revenue ~ .`, `revenue ~ . - LEED - Energystar - leasing_rate - Rent`,
-and `revenue ~ . - LEED - Energystar` for each model 1, 2, and 3. Out of
-the three models, the model which had all the variables performed the
-best during cross-validated in-sample performance test. The table for
-the rMSE’s for each forest model is below.
+`revenue ~ . - CS_PropertyID`,
+`revenue ~ . - LEED - Energystar - leasing_rate - Rent - CS_PropertyID`,
+and `revenue ~ . - LEED - Energystar - CS_PropertyID` for each model 1,
+2, and 3. Out of the three models, the model which had all the variables
+performed the best during cross-validated in-sample performance test.
+The table for the rMSE’s for each forest model is below.
 
 |      | Random Forest 1 | Random Forest 2 | Random Forest 3 |
 |:-----|----------------:|----------------:|----------------:|
-| RMSE |        229.9396 |        760.2131 |        243.6687 |
+| RMSE |        241.9962 |        776.1325 |        232.3385 |
 
 We repeated the process for gradient boosted models. We used Gradient
 Boosting models with distribution as “gaussian”, the number of trees as
@@ -133,7 +136,7 @@ rMSE’s for each boosted model is below.
 
 |      | Boosted 1 | Boosted 2 | Boosted 3 |
 |:-----|----------:|----------:|----------:|
-| RMSE |  284.8181 |  890.4577 |  350.5311 |
+| RMSE |  284.3986 |  912.2533 |  292.7291 |
 
 We repeat the process for knn models. Out of the same three models, the
 model which had all the variables except for
@@ -141,10 +144,18 @@ model which had all the variables except for
 best during cross-validated in-sample performance test. The table for
 the rMSE’s for each boosted model is below.
 
-|      |    knn 1 |    knn 2 |    knn 3 |
-|:-----|---------:|---------:|---------:|
-| k    |    5.000 |    5.000 |    5.000 |
-| RMSE | 1197.647 | 1213.099 | 1192.176 |
+|      |   knn 1 |    knn 2 |    knn 3 |
+|:-----|--------:|---------:|---------:|
+| k    |    5.00 |    5.000 |    5.000 |
+| RMSE | 1348.08 | 1329.376 | 1339.207 |
+
+Finally, we chose tree 3 and knn 3 as it has the lowest in-sample
+cross-validated RMSE’s. For the random forest and gradient boosted
+models, we choose the 3’s although 1’ perform slightly better. This is
+because we’re trying to answer the question of the effect of getting the
+green certification on the revenue per square foot per calendar year and
+including the two variables in the model woud dilute the partial
+dependence.
 
 In the end, we trained the chosen models with all the training data and
 the out-of sample rmse values. The table for this is below.
@@ -196,7 +207,7 @@ stepwise-selected model.
 |:-----|---------:|---------:|--------:|------------:|---------:|--------:|
 | RMSE | 76308.71 | 73574.85 | 68556.9 |     69647.3 | 52313.02 | 50174.9 |
 
-Therefore, we choose the gradient boosted model that has all tha
+Therefore, we choose the gradient boosted model that has all the
 variables as the features. This makes sense, as the price would be
 affected by the location of the house. The plots are below.
 
