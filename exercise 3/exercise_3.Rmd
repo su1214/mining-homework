@@ -119,7 +119,6 @@ For the random forest model, we choose the third model with the specification of
 ```{r}
 # Gradient Boosting
 
-trctrl = trainControl(method = "cv", number = 5, savePredictions=TRUE)
 dengue_gbm1 = gbm(total_cases ~., data = dengue_train, distribution = "gaussian", n.trees = 10000,
                   shrinkage = 0.01, interaction.depth = 4, cv.folds = 5)
 dengue_gbm2 = gbm(total_cases ~ season + specific_humidity + tdtr_k + precipitation_amt,
@@ -157,7 +156,7 @@ rownames(dengue_rmse) = "RMSE"
 kable(dengue_rmse)
 ```
 
-Out-of-sample rMSE is lowest with the random forest model. We draw the partial dependence plots below.
+Out-of-sample rMSE is lowest with the random forest model. We draw the partial dependence plots on `specific_humidity`, `precipitation_amt`, and `tdtr_k` below.
 
 ```{r}
 # Looks like random Forest is the best and better than even the pruned tree by a slim margin
@@ -179,8 +178,9 @@ green_train = training(greenbuildings_split)
 green_test = testing(greenbuildings_split)
 ```
 
-Modeling started with combining the LEED and EnergyStar to create a green_certified 
-column. Also removed the null variables. Created a train test split with 80 percent
+We started modeling with combining the LEED and EnergyStar to create a green_certified 
+column, which is a dummy variable that is 1 if green certified in any form and 0 otherwise.
+Also, we removed the nulls. Then ,we created a train/test split with 80 percent
 of the data being the training set data and 20 percent being the testing set data.
 
 ```{r}
@@ -219,22 +219,52 @@ green_step = lm(formula = revenue ~ CS_PropertyID + cluster + size + empl_gr +
     amenities:Gas_Costs + amenities:Precipitation, data = green_train)
 ```
 
-In terms of the types of models we started with a linear regression model. After that
-using the stepwise variable selection computed the best set of variables and the
-interaction between them which performed the best. That became the second model.
+In terms of the types of models, we started with a baseline linear regression model, with the specification of 
+revenue on everything else. 
+After that, using the stepwise variable selection function, we computed the best set of variables and the
+interaction between them which performed the best. The linear model chose by the stepwise function is 
+`revenue ~ CS_PropertyID + cluster + size + empl_gr + 
+    stories + age + renovated + class_a + class_b + green_rating + 
+    net + amenities + cd_total_07 + hd_total07 + total_dd_07 + 
+    Precipitation + Gas_Costs + Electricity_Costs + City_Market_Rent + 
+    green_certified + size:City_Market_Rent + CS_PropertyID:City_Market_Rent + 
+    size:Precipitation + stories:class_a + size:Gas_Costs + cluster:City_Market_Rent + 
+    green_rating:amenities + cd_total_07:hd_total07 + age:City_Market_Rent + 
+    age:total_dd_07 + renovated:Precipitation + cluster:size + 
+    CS_PropertyID:total_dd_07 + Electricity_Costs:City_Market_Rent + 
+    renovated:Gas_Costs + CS_PropertyID:Precipitation + stories:renovated + 
+    age:class_b + hd_total07:total_dd_07 + CS_PropertyID:empl_gr + 
+    size:green_rating + size:class_b + size:class_a + size:age + 
+    age:Electricity_Costs + renovated:City_Market_Rent + renovated:total_dd_07 + 
+    class_a:City_Market_Rent + amenities:Electricity_Costs + 
+    CS_PropertyID:cd_total_07 + size:renovated + empl_gr:Gas_Costs + 
+    CS_PropertyID:class_b + CS_PropertyID:class_a + CS_PropertyID:size + 
+    class_a:Gas_Costs + CS_PropertyID:Electricity_Costs + CS_PropertyID:cluster + 
+    class_a:hd_total07 + class_a:Electricity_Costs + age:class_a + 
+    class_a:Precipitation + empl_gr:renovated + cluster:Electricity_Costs + 
+    cluster:hd_total07 + size:cd_total_07 + stories:cd_total_07 + 
+    size:Electricity_Costs + age:Gas_Costs + class_b:Gas_Costs + 
+    stories:age + renovated:Electricity_Costs + cd_total_07:total_dd_07 + 
+    age:cd_total_07 + hd_total07:Electricity_Costs + stories:Precipitation + 
+    amenities:Gas_Costs + amenities:Precipitation`. We decided to take both models to the final decision where we compare the 
+out-of-sample RMSE's.
+
+
+Next, we experimented with a tree model by considering all the variables except LEED, Energystar
+because LEED and Energystar is already considered under the green_certified (tree 3).
+We then constructed 2 more tree models, one having all the variables and the other 
+one without leasing_rate, Rent, LEED and Energystar as features (tree 1 and 2).
+The specifications are `revenue ~ .`, `revenue ~ . - LEED - Energystar - leasing_rate - Rent`, and
+`revenue ~ . - LEED - Energystar` for each model 1, 2, and 3.
+We compared the three models with cross validated in-sample rMSE's with the fold of 5.
+The table for the rMSE's are below. As the one that takes all the variables into account has the 
+lowest rMSE, we choose this model to take to the final decision.
+We then also pruned the tree to see if this would increase the performance.
 
 ```{r}
 # Trees
-green.tree = rpart(revenue ~ . - LEED - Energystar, 
-                    data=green_train,
-                    control = rpart.control(cp = 0.002, minsplit=30))
-
-# Tree with pruning
-# cp_1se(green.tree)
-green.prune = prune_1se(green.tree)
-
 trctrl = trainControl(method = "cv", number = 5, savePredictions=TRUE)
-green_tree1 = train(revenue ~., data = green_train, method = "rpart", trControl=trctrl, tuneLength = 0)
+green_tree1 = train(revenue ~ ., data = green_train, method = "rpart", trControl=trctrl, tuneLength = 0)
 green_tree2 = train(revenue ~ . - LEED - Energystar - leasing_rate - Rent,
       data = green_train, method = "rpart", trControl=trctrl, tuneLength = 0)
 green_tree3 = train(revenue ~ . - LEED - Energystar,
@@ -248,22 +278,23 @@ green_tree3$results$RMSE
 colnames(green_tree_rmse) = c("Tree 1", "Tree 2", "Tree 3")
 rownames(green_tree_rmse) = "RMSE"
 kable(green_tree_rmse)
+
+green.tree = rpart(revenue ~ . - LEED - Energystar, 
+                    data=green_train,
+                    control = rpart.control(cp = 0.002, minsplit=30))
+
+green.prune = prune_1se(green.tree)
 ```
 
-Next, experimented with a tree model by considering all the variables except LEED, Energystar
-because LEED and Energystar is already considered under the green_certified and including
-it would create multicollinearity issues. We also adopted the pruning method to test
-trees with different configurations which increased the performance of the tree model.
-Constructed 2 more tree models with cross folds of 5 with the first one having all the
-variables and second one removing leasing_rate and also Rent along with LEED and Energystar.
-The model with all the variables performs the best during in sample performance.
+For random forest models, we also started with three models that utilize different features as in choosing the tree model.
+The specifications are `revenue ~ .`, `revenue ~ . - LEED - Energystar - leasing_rate - Rent`, and
+`revenue ~ . - LEED - Energystar` for each model 1, 2, and 3.
+Out of the three models, the model which had all the variables performed
+the best during cross-validated in-sample performance test.
+The table for the rMSE's for each forest model is below.
 
 ```{r}
 # Random Forest
-green.forest = randomForest(revenue ~ ., 
-                    data=green_train,
-                    importance = TRUE, na.action=na.omit)
-
 trctrl = trainControl(method = "cv", number = 5, savePredictions=TRUE)
 green_forest1 = train(revenue ~., data = green_train, method = "rf", trControl=trctrl, prox=TRUE, tuneLength=1)
 green_forest2 = train(revenue ~ . - LEED - Energystar - leasing_rate - Rent,
@@ -279,32 +310,75 @@ green_forest3$results$RMSE
 colnames(green_forest_rmse) = c("Random Forest 1", "Random Forest 2", "Random Forest 3")
 rownames(green_forest_rmse) = "RMSE"
 kable(green_forest_rmse)
+
+green.forest = randomForest(revenue ~ ., 
+                    data=green_train,
+                    importance = TRUE, na.action=na.omit)
 ```
 
-Used the random forest models with all variables as the next model
-and saw a significant improvment in the model performance. Out of the three models
-that we used with cross validation the model which had all the variables performed
-the best during in sample performance test. 
+We repeated the process for gradient boosted models.
+We used Gradient Boosting models with distribution as "gaussian", the number of trees 
+as 10000, shrinkage as 0.01,and with a interaction depth of 4.
+Out of the three models, the model which had all the variables performed
+the best during cross-validated in-sample performance test.
+The table for the rMSE's for each boosted model is below.
 
 ```{r}
 # Gradient Boosting
-green.gbs = gbm(revenue ~ . - LEED - Energystar - leasing_rate - Rent, 
+green_gbm1 = gbm(revenue ~., data = green_train, distribution = "gaussian", n.trees = 10000,
+                  shrinkage = 0.01, interaction.depth = 4, cv.folds = 5)
+green_gbm2 = gbm(revenue ~ . - LEED - Energystar - leasing_rate - Rent,
+      data = green_train, distribution = "gaussian", n.trees = 10000,
+                  shrinkage = 0.01, interaction.depth = 4, cv.folds = 5)
+green_gbm3 = gbm(revenue ~ . - LEED - Energystar, 
+                    data=green_train, distribution = "gaussian", n.trees = 10000,
+                  shrinkage = 0.01, interaction.depth = 4, cv.folds = 5)
+
+green_gbm_rmse = data.frame(
+green_gbm1$cv.error %>% mean %>% sqrt,
+green_gbm2$cv.error %>% mean %>% sqrt,
+green_gbm3$cv.error %>% mean %>% sqrt
+)
+colnames(green_gbm_rmse) = c("Boosted 1", "Boosted 2", "Boosted 3")
+rownames(green_gbm_rmse) = "RMSE"
+kable(green_gbm_rmse)
+
+green.gbs = gbm(revenue ~ ., 
                     data=green_train, distribution = "gaussian", n.trees = 10000,
                   shrinkage = 0.01, interaction.depth = 4, cv.folds = 5)
 ```
 
+We repeat the process for knn models.
+Out of the same three models, the model which had all the variables except for `LEED, Energystar, leasing_rate,` and `Rent` with 
+`k = 5` performed the best during cross-validated in-sample performance test.
+The table for the rMSE's for each boosted model is below.
+
 ```{r}
 # knn model
-k_grid = seq(300,495, by=5)
+trctrl = trainControl(method = "cv", number = 5, savePredictions=TRUE)
+green_knn1 = train(revenue ~., data = green_train, method = "knn", trControl=trctrl, tuneLength=20)
+green_knn2 = train(revenue ~ . - LEED - Energystar - leasing_rate - Rent,
+                   data = green_train, method = "knn", trControl=trctrl, tuneLength=20)
+green_knn3 = train(revenue ~ . - LEED - Energystar,
+                   data = green_train, method = "knn", trControl=trctrl, tuneLength=20)
 
-green_knn_grid = foreach(k = k_grid, .combine='rbind') %do% {
-  model = knnreg(revenue ~ . - LEED - Energystar - leasing_rate - Rent, k=k, data = green_train)
-  rms = modelr::rmse(model, green_test)
-  c(k=k, err=rms)
-} %>% as.data.frame
+green_knn_rmse = data.frame(matrix(c(
+green_knn1$results[green_knn1$results$RMSE == green_knn1$results$RMSE %>% min, 1] %>% as.integer(), 
+green_knn1$results[green_knn1$results$RMSE == green_knn1$results$RMSE %>% min, 2],
+green_knn2$results[green_knn2$results$RMSE == green_knn2$results$RMSE %>% min, 1] %>% as.integer(), 
+green_knn2$results[green_knn2$results$RMSE == green_knn2$results$RMSE %>% min, 2],
+green_knn3$results[green_knn3$results$RMSE == green_knn3$results$RMSE %>% min, 1] %>% as.integer(), 
+green_knn3$results[green_knn3$results$RMSE == green_knn3$results$RMSE %>% min, 2]),
+nrow = 2))
+colnames(green_knn_rmse) = c("knn 1", "knn 2", "knn 3")
+rownames(green_knn_rmse) = c('k', "RMSE")
+kable(green_knn_rmse)
 
-green_knn_final = green_knn_grid %>% filter(err == min(green_knn_grid$err))
+green.knn = knnreg(revenue ~ . - LEED - Energystar - leasing_rate - Rent, k=5, data = green_train)
 ```
+
+In the end, we trained the chosen models with all the training data and 
+the out-of sample rmse values. The table for this is below.
 
 ```{r}
 green_rmse = data.frame(
@@ -314,28 +388,23 @@ modelr::rmse(green_tree1, green_test),
 modelr::rmse(green.prune, green_test),
 modelr::rmse(green_forest1, green_test),
 modelr::rmse(green.gbs, green_test),
-green_knn_final$err)
+modelr::rmse(green.knn, green_test))
 colnames(green_rmse) = c("Linear", "Stepwise", "Tree", "Pruned Tree", "Forest", "GBM", "knn")
 rownames(green_rmse) = "RMSE"
 kable(green_rmse)
+```
 
+Since the random forest model performed the best, we decided to draw a partial dependence plot on `green_certified` with this.
+As seen in the graph below, a green_certified building generates 3 dollars more in revenue on
+average compared to a non green_certified building per square foot per year.
+
+```{r}
 partialPlot(green.forest, as.data.frame(green_test), 'green_certified', las=1)
 ```
 
-Gradient Boosting model was selected next with distribution as "gaussian", the number of trees 
-as 10000, shrinkage as 0.01,and with a interaction depth of 4. Also added the cross validation
-option with a value of 5. This model gave a similar performance compared to the best random forest model. 
-At last we chose a knn model and calculated a model for each k value from 300 to 495 with a difference of 5. 
-Found the best k value which has the best performance.
-
-In the end compared all these selected models with the rmse values and this can be seen on the
-table above. 
-
-Since the random forest model performed the best, chose this model to draw a partial plot with.
-As seen in the graph above a green_certified building generates 3 dollars more in revenue on
-average compared to a non green_certified building per square foot per year. 
-
 ## Predictive model building: California housing
+
+We start by splitting the dataset into training and testing set. Training set takes 80% of the dataset and rest going to the testing set. In terms of the model selection, we started with a linear model to select the statistically significant variables. Then we created a stepwise selection model with all the variables except latitude and longitude in the scope, After this we built a tree model with `housingMedianAge, totalRooms, totalBedrooms, population, households, medianIncome` variables. Also pruned this model to check if it produces a better model. It turned out that pruned tree was not better than the tree model. We created a Random forest model with the same variables as the tree model which performed way better than any model that we created till now. In the end we created a gradient boosted model with the same variables which performed slightly better than the random forest model.
 
 ```{r}
 CAhousing = read_csv("CAhousing.csv")
@@ -388,7 +457,7 @@ kable(CAhousing_rmse)
 #proceed with GBM model
 ```
 
-We choose the gradiented boosted model that has `housingMedianAge`, `totalRooms`, `totalBedrooms`, `population`, `households`, and `medianIncome` as the features. The plots are below.
+So we choose the gradient boosted model that has `housingMedianAge`, `totalRooms`, `totalBedrooms`, `population`, `households`, and `medianIncome` as the features. The plots are below.
 
 ```{r}
 CAmap = get_map("california", zoom=6)
