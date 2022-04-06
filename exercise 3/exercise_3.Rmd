@@ -178,6 +178,7 @@ greenbuildings_split = initial_split(greenbuildings, 0.8)
 green_train = training(greenbuildings_split)
 green_test = testing(greenbuildings_split)
 ```
+
 Modeling started with combining the LEED and EnergyStar to create a green_certified 
 column. Also removed the null variables. Created a train test split with 80 percent
 of the data being the training set data and 20 percent being the testing set data.
@@ -248,6 +249,7 @@ colnames(green_tree_rmse) = c("Tree 1", "Tree 2", "Tree 3")
 rownames(green_tree_rmse) = "RMSE"
 kable(green_tree_rmse)
 ```
+
 Next, experimented with a tree model by considering all the variables except LEED, Energystar
 because LEED and Energystar is already considered under the green_certified and including
 it would create multicollinearity issues. We also adopted the pruning method to test
@@ -278,10 +280,12 @@ colnames(green_forest_rmse) = c("Random Forest 1", "Random Forest 2", "Random Fo
 rownames(green_forest_rmse) = "RMSE"
 kable(green_forest_rmse)
 ```
+
 Used the random forest models with all variables as the next model
 and saw a significant improvment in the model performance. Out of the three models
 that we used with cross validation the model which had all the variables performed
 the best during in sample performance test. 
+
 ```{r}
 # Gradient Boosting
 green.gbs = gbm(revenue ~ . - LEED - Energystar - leasing_rate - Rent, 
@@ -317,6 +321,7 @@ kable(green_rmse)
 
 partialPlot(green.forest, as.data.frame(green_test), 'green_certified', las=1)
 ```
+
 Gradient Boosting model was selected next with distribution as "gaussian", the number of trees 
 as 10000, shrinkage as 0.01,and with a interaction depth of 4. Also added the cross validation
 option with a value of 5. This model gave a similar performance compared to the best random forest model. 
@@ -344,7 +349,7 @@ CAhousing_test = testing(CAhousing_split)
 CAhousing_lm = lm(medianHouseValue ~ . - longitude - latitude, data=CAhousing_train)
 
 # Stepwise
-CAhousing_step = step(CAhousing_lm, scope=~(. - longitude - latitude)^2)
+CAhousing_step = step(CAhousing_lm, scope=~(. - longitude - latitude)^2, trace=0)
 
 # CART
 CAhousing.tree = rpart(medianHouseValue ~ housingMedianAge + totalRooms + 
