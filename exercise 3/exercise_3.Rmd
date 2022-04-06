@@ -45,28 +45,35 @@ dengue = read_csv('dengue.csv') %>% drop_na()
 dengue$city = dengue$city %>% factor()
 dengue$season = dengue$season %>% factor()
 
+set.seed(98236)
 dengue_split = initial_split(dengue, 0.8)
 dengue_train = training(dengue_split)
 dengue_test = testing(dengue_split)
 
-#including city didn't really help
+#CART
+trctrl = trainControl(method = "cv", number = 5, savePredictions=TRUE)
+dengue_tree1 = train(total_cases ~., data = dengue_train, method = "rpart", trControl=trctrl, 
+                     tuneLength = 1, control = rpart.control(cp = 0.002, minsplit=30))
+dengue_tree2 = train(total_cases ~ season + specific_humidity + tdtr_k + precipitation_amt,
+      data = dengue_train, method = "rpart", trControl=trctrl, tuneLength = 1, 
+      control = rpart.control(cp = 0.002, minsplit=30))
+dengue_tree3 = train(total_cases ~ city + season + specific_humidity + tdtr_k + precipitation_amt,
+      data = dengue_train, method = "rpart", trControl=trctrl, tuneLength = 1,
+      control = rpart.control(cp = 0.002, minsplit=30))
 
-# CART
+dengue_tree_rmse = data.frame(
+dengue_tree1$results$RMSE,
+dengue_tree2$results$RMSE,
+dengue_tree3$results$RMSE
+)
+colnames(dengue_tree_rmse) = c("Tree 1", "Tree 2", "Tree 3")
+rownames(dengue_tree_rmse) = "RMSE"
+kable(dengue_tree_rmse)
+
+# CART, with all the training data
 dengue.tree = rpart(total_cases ~ season + specific_humidity + tdtr_k + precipitation_amt, 
                     data=dengue_train,
                     control = rpart.control(cp = 0.002, minsplit=30))
-
-#rpart.plot(dengue.tree, digits=-5, type=4, extra=1)
-#plotcp(dengue.tree)
-
-cp_1se = function(my_tree) {
-  out = as.data.frame(my_tree$cptable)
-  thresh = min(out$xerror + out$xstd)
-  cp_opt = max(out$CP[out$xerror <= thresh])
-  cp_opt
-}
-
-# cp_1se(dengue.tree)
 
 prune_1se = function(my_tree) {
   out = as.data.frame(my_tree$cptable)
@@ -76,29 +83,83 @@ prune_1se = function(my_tree) {
 }
 
 dengue.prune = prune_1se(dengue.tree)
+```
 
+First, I split the data into training and testing sets. Then, I wanted to choose the best CART model. For CART, we choose the second model with the specification of `total_cases ~ season + specific_humidity + tdtr_k + precipitation_amt` as it has the lowest in-sample cross validated rMSE. Then, I trained again the chosen model with all the training data and pruned the tree.
+
+```{r}
 # Random Forest
-dengue.forest = randomForest(total_cases ~ season + specific_humidity + tdtr_k + precipitation_amt, 
+
+trctrl = trainControl(method = "cv", number = 5, savePredictions=TRUE)
+dengue_rf1 = train(total_cases ~., data = dengue_train, method = "rf", trControl=trctrl,
+                   tuneLength = 1, importance = TRUE, na.action=na.omit)
+dengue_rf2 = train(total_cases ~ season + specific_humidity + tdtr_k + precipitation_amt,
+      data = dengue_train, method = "rf", trControl=trctrl,
+       tuneLength = 1, importance = TRUE, na.action=na.omit)
+dengue_rf3 = train(total_cases ~ city + season + specific_humidity + tdtr_k + precipitation_amt,
+      data = dengue_train, method = "rf", trControl=trctrl,
+       tuneLength = 1, importance = TRUE, na.action=na.omit)
+
+dengue_rf_rmse = data.frame(
+dengue_rf1$results$RMSE,
+dengue_rf2$results$RMSE,
+dengue_rf3$results$RMSE
+)
+colnames(dengue_rf_rmse) = c("Random Forest 1", "Random Forest 2", "Random Forest 3")
+rownames(dengue_rf_rmse) = "RMSE"
+kable(dengue_rf_rmse)
+
+dengue.forest = randomForest(total_cases ~ city + season + specific_humidity + tdtr_k + precipitation_amt, 
                     data=dengue_train,
                     importance = TRUE, na.action=na.omit)
+```
 
-# plotcp(dengue.tree)
+For the random forest model, we choose the third model with the specification of `total_cases ~ city + season + specific_humidity + tdtr_k + precipitation_amt` as it has the lowest in-sample cross validated rMSE. Then, I trained again the chosen model with all the training data.
 
+```{r}
 # Gradient Boosting
+
+trctrl = trainControl(method = "cv", number = 5, savePredictions=TRUE)
+dengue_gbm1 = gbm(total_cases ~., data = dengue_train, distribution = "gaussian", n.trees = 10000,
+                  shrinkage = 0.01, interaction.depth = 4, cv.folds = 5)
+dengue_gbm2 = gbm(total_cases ~ season + specific_humidity + tdtr_k + precipitation_amt,
+      data = dengue_train, distribution = "gaussian", n.trees = 10000,
+                  shrinkage = 0.01, interaction.depth = 4, cv.folds = 5)
+dengue_gbm3 = gbm(total_cases ~ city + season + specific_humidity + tdtr_k + precipitation_amt,
+      data = dengue_train, distribution = "gaussian",n.trees = 10000,
+                  shrinkage = 0.01, interaction.depth = 4, cv.folds = 5)
+
+dengue_gbm_rmse = data.frame(
+dengue_gbm1$cv.error %>% mean %>% sqrt,
+dengue_gbm2$cv.error %>% mean %>% sqrt,
+dengue_gbm3$cv.error %>% mean %>% sqrt
+)
+colnames(dengue_gbm_rmse) = c("Gradient Boosted Tree 1", "Gradient Boosted Tree 2", "Gradient Boosted Tree 3")
+rownames(dengue_gbm_rmse) = "RMSE"
+kable(dengue_gbm_rmse)
+
 dengue.gbs = gbm(total_cases ~ season + specific_humidity + tdtr_k + precipitation_amt, 
                     data=dengue_train, distribution = "gaussian",n.trees = 10000,
                   shrinkage = 0.01, interaction.depth = 4)
+```
 
+For the gradient boosted tree model, we again choose the third model with the specification of `total_cases ~ city + season + specific_humidity + tdtr_k + precipitation_amt` as it has the lowest in-sample cross validated rMSE. Then, I trained again the chosen model with all the training data.
+
+```{r}
 dengue_rmse = data.frame(
 modelr::rmse(dengue.tree, dengue_test),
 modelr::rmse(dengue.prune, dengue_test),
 modelr::rmse(dengue.forest, dengue_test),
 modelr::rmse(dengue.gbs, dengue_test)
 )
-colnames(dengue_rmse) = c("CART", "Pruned", "Ranbdom Forest", "GBM")
+colnames(dengue_rmse) = c("CART", "Pruned", "Ranbdom Forest", "Boosted")
 rownames(dengue_rmse) = "RMSE"
 kable(dengue_rmse)
+```
 
+Out-of-sample rMSE is lowest with the random forest model. We draw the partial dependence plots below.
+
+```{r}
 # Looks like random Forest is the best and better than even the pruned tree by a slim margin
 partialPlot(dengue.forest, as.data.frame(dengue_test), 'specific_humidity', las=1)
 partialPlot(dengue.forest, as.data.frame(dengue_test), 'precipitation_amt', las=1)
