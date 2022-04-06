@@ -133,7 +133,7 @@ rMSE’s for each boosted model is below.
 
 |      | Boosted 1 | Boosted 2 | Boosted 3 |
 |:-----|----------:|----------:|----------:|
-| RMSE |  276.2563 |  885.6648 |  278.7189 |
+| RMSE |  284.8181 |  890.4577 |  350.5311 |
 
 We repeat the process for knn models. Out of the same three models, the
 model which had all the variables except for
@@ -165,46 +165,43 @@ foot per year.
 
 We start by splitting the dataset into training and testing set.
 Training set takes 80% of the dataset and rest going to the testing set.
-In terms of the model selection, we started with a linear model to
-select the statistically significant variables. Then we created a
+In terms of the model selection, we started with a baseline linear
+model. To select the statistically significant variables, we created a
 stepwise selection model with all the variables except latitude and
-longitude in the scope, After this we built a tree model with
+longitude in the scope. After this, we built tree, random forest and
+gradient boosted models with
 `housingMedianAge, totalRooms, totalBedrooms, population, households, medianIncome`
-variables. Also pruned this model to check if it produces a better
-model. It turned out that pruned tree was not better than the tree
-model. We created a Random forest model with the same variables as the
-tree model which performed way better than any model that we created
-till now. In the end we created a gradient boosted model with the same
-variables which performed slightly better than the random forest model.
+variables and all the variables including `longitude` and `latitude`. We
+also pruned the tree models to check if it produces a better model. It
+turned out that pruned tree was not better than the tree model. The
+table of in-sample cross-validated RMSE’s for each model is below.
 
-|      |   Tree 1 |  Tree 2 |
-|:-----|---------:|--------:|
-| RMSE | 51474.81 | 65834.3 |
+|      | Tree 1 |   Tree 2 |
+|:-----|-------:|---------:|
+| RMSE | 100562 | 104264.2 |
 
-|      |   Linear | Stepwise |     Tree | Pruned Tree |   Forest |     GBM |
-|:-----|---------:|---------:|---------:|------------:|---------:|--------:|
-| RMSE | 76308.71 | 73574.85 | 78880.61 |    79489.27 | 67013.49 | 67269.1 |
+|      | Random Forest 1 | Random Forest 2 |
+|:-----|----------------:|----------------:|
+| RMSE |        51569.95 |        65851.06 |
 
-We start by splitting the dataset into training and testing set.
-Training set takes 80% of the dataset and rest going to the testing set.
-In terms of the model selection, we started with a linear model to
-select the statistically significant variables. Then we created a
-stepwise selection model with all the variables except latitude and
-longitude in the scope, After this we built a tree model with
-`housingMedianAge, totalRooms, totalBedrooms, population, households, medianIncome`
-variables. Also pruned this model to check if it produces a better
-model. It turned out that pruned tree was not better than the tree
-model. We created a Random forest model with the same variables as the
-tree model which performed way better than any model that we created
-till now. In the end we created a gradient boosted model with the same
-variables which performed slightly better than the random forest model.
+|      | Boosted 1 | Boosted 2 |
+|:-----|----------:|----------:|
+| RMSE |  52041.46 |  67013.85 |
 
-So we choose the gradient boosted model that has `housingMedianAge`,
-`totalRooms`, `totalBedrooms`, `population`, `households`, and
-`medianIncome` as the features. The plots are below.
+We compare the out-of-sample RMSE’s of the best tree, random forest, and
+gradient boosted models along with the baseline linear model and the
+stepwise-selected model.
 
-![](exercise_3_files/figure-markdown_github/unnamed-chunk-18-1.png)
+|      |   Linear | Stepwise |    Tree | Pruned Tree |   Forest |     GBM |
+|:-----|---------:|---------:|--------:|------------:|---------:|--------:|
+| RMSE | 76308.71 | 73574.85 | 68556.9 |     69647.3 | 52313.02 | 50174.9 |
+
+Therefore, we choose the gradient boosted model that has all tha
+variables as the features. This makes sense, as the price would be
+affected by the location of the house. The plots are below.
 
 ![](exercise_3_files/figure-markdown_github/unnamed-chunk-19-1.png)
 
 ![](exercise_3_files/figure-markdown_github/unnamed-chunk-20-1.png)
+
+![](exercise_3_files/figure-markdown_github/unnamed-chunk-21-1.png)

@@ -402,11 +402,17 @@ partialPlot(green.forest, as.data.frame(green_test), 'green_certified', las=1)
 
 ## Predictive model building: California housing
 
-We start by splitting the dataset into training and testing set. Training set takes 80% of the dataset and rest going to the testing set. In terms of the model selection, we started with a linear model to select the statistically significant variables. Then we created a stepwise selection model with all the variables except latitude and longitude in the scope, After this we built a tree model with `housingMedianAge, totalRooms, totalBedrooms, population, households, medianIncome` variables. Also pruned this model to check if it produces a better model. It turned out that pruned tree was not better than the tree model. We created a Random forest model with the same variables as the tree model which performed way better than any model that we created till now. In the end we created a gradient boosted model with the same variables which performed slightly better than the random forest model.
+We start by splitting the dataset into training and testing set. 
+Training set takes 80% of the dataset and rest going to the testing set. 
+In terms of the model selection, we started with a baseline linear model. 
+To select the statistically significant variables, we created a stepwise selection model with all the variables except latitude and longitude in the scope. 
+After this, we built tree, random forest and gradient boosted models with `housingMedianAge, totalRooms, totalBedrooms, population, households, medianIncome` variables and all the variables including `longitude` and `latitude`. 
+We also pruned the tree models to check if it produces a better model. 
+It turned out that pruned tree was not better than the tree model. 
+The table of in-sample cross-validated RMSE's for each model is below.
 
 ```{r}
 CAhousing = read_csv("CAhousing.csv")
-CAmap = get_map("california", zoom=4)
 
 CAhousing_split = initial_split(CAhousing, 0.8)
 CAhousing_train = training(CAhousing_split)
@@ -474,13 +480,14 @@ CAhousing_gbm2 = gbm(medianHouseValue ~ housingMedianAge + totalRooms +
 
 CAhousing_gbm_rmse = data.frame(
 CAhousing_gbm1$cv.error %>% mean %>% sqrt,
-CAhousing_gbm2$cv.error %>% mean %>% sqrt,
+CAhousing_gbm2$cv.error %>% mean %>% sqrt
 )
 colnames(CAhousing_gbm_rmse) = c("Boosted 1", "Boosted 2")
 rownames(CAhousing_gbm_rmse) = "RMSE"
 kable(CAhousing_gbm_rmse)
 ```
 
+We compare the out-of-sample RMSE's of the best tree, random forest, and gradient boosted models along with the baseline linear model and the stepwise-selected model.
 
 ```{r}
 CAhousing_rmse = data.frame(
@@ -489,16 +496,16 @@ modelr::rmse(CAhousing_step, CAhousing_test),
 modelr::rmse(CAhousing.tree, CAhousing_test),
 modelr::rmse(CAhousing.prune, CAhousing_test),
 modelr::rmse(CAhousing.forest, CAhousing_test),
-modelr::rmse(CAhousing_gbs1, CAhousing_test))
+modelr::rmse(CAhousing_gbm1, CAhousing_test))
 colnames(CAhousing_rmse) = c("Linear", "Stepwise", "Tree", "Pruned Tree", "Forest", "GBM")
 rownames(CAhousing_rmse) = "RMSE"
 kable(CAhousing_rmse)
 #proceed with GBM model
 ```
 
-We start by splitting the dataset into training and testing set. Training set takes 80% of the dataset and rest going to the testing set. In terms of the model selection, we started with a linear model to select the statistically significant variables. Then we created a stepwise selection model with all the variables except latitude and longitude in the scope, After this we built a tree model with `housingMedianAge, totalRooms, totalBedrooms, population, households, medianIncome` variables. Also pruned this model to check if it produces a better model. It turned out that pruned tree was not better than the tree model. We created a Random forest model with the same variables as the tree model which performed way better than any model that we created till now. In the end we created a gradient boosted model with the same variables which performed slightly better than the random forest model.
-
-So we choose the gradient boosted model that has `housingMedianAge`, `totalRooms`, `totalBedrooms`, `population`, `households`, and `medianIncome` as the features. The plots are below.
+Therefore, we choose the gradient boosted model that has all tha variables as the features. 
+This makes sense, as the price would be affected by the location of the house. 
+The plots are below.
 
 ```{r}
 CAmap = get_map("california", zoom=6)
@@ -512,7 +519,7 @@ ggmap(CAmap) +
 ```
 
 ```{r}
-CApredict = CAhousing %>% mutate(predictedMedianHouseValue = predict.gbm(CAhousing.gbs, newdata = CAhousing))
+CApredict = CAhousing %>% mutate(predictedMedianHouseValue = predict.gbm(CAhousing_gbm1, newdata = CAhousing))
 ggmap(CAmap) + 
   geom_point(aes(x = longitude, y = latitude, color = predictedMedianHouseValue/100000), data = CApredict, alpha = .4) +
   labs(x = 'Longitude', y = 'Latitude', title = "Predicted Median House Values in California", 
