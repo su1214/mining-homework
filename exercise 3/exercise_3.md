@@ -163,9 +163,9 @@ the out-of sample rmse values. The table for this is below.
 Since the gradient boosted model performed the best, we calculated the
 difference of the predicted revenue for `green_certified == 1` and
 `green_certified == 0` to calculate the partial dependence of the green
-certification. On average, a green_certified building generates
-193.2565864 dollars more in revenue, per square foot per year, compared
-to a non green_certified building.
+certification. On average, a green_certified building generates 326.8197
+dollars more in revenue, per square foot per year, compared to a non
+green_certified building.
 
 ## Predictive model building: California housing
 
