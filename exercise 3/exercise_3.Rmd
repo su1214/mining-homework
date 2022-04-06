@@ -54,7 +54,8 @@ dengue.tree = rpart(total_cases ~ season + specific_humidity + tdtr_k + precipit
                     data=dengue_train,
                     control = rpart.control(cp = 0.002, minsplit=30))
 
-# rpart.plot(dengue.tree, digits=-5, type=4, extra=1)
+#rpart.plot(dengue.tree, digits=-5, type=4, extra=1)
+#plotcp(dengue.tree)
 
 cp_1se = function(my_tree) {
   out = as.data.frame(my_tree$cptable)
@@ -86,10 +87,15 @@ dengue.gbs = gbm(total_cases ~ season + specific_humidity + tdtr_k + precipitati
                     data=dengue_train, distribution = "gaussian",n.trees = 10000,
                   shrinkage = 0.01, interaction.depth = 4)
 
-modelr::rmse(dengue.tree, dengue_test)
-modelr::rmse(dengue.prune, dengue_test)
-modelr::rmse(dengue.forest, dengue_test)
+dengue_rmse = data.frame(
+modelr::rmse(dengue.tree, dengue_test),
+modelr::rmse(dengue.prune, dengue_test),
+modelr::rmse(dengue.forest, dengue_test),
 modelr::rmse(dengue.gbs, dengue_test)
+)
+colnames(dengue_rmse) = c("CART", "Pruned", "Ranbdom Forest", "GBM")
+rownames(dengue_rmse) = "RMSE"
+kable(dengue_rmse)
 
 # Looks like random Forest is the best and better than even the pruned tree by a slim margin
 partialPlot(dengue.forest, as.data.frame(dengue_test), 'specific_humidity', las=1)
@@ -179,18 +185,41 @@ modelr::rmse(green.prune, green_test),
 modelr::rmse(green.forest, green_test),
 modelr::rmse(green.gbs, green_test),
 green_knn_final$err)
-colnames(green_rmse) = c("Linear", "Stepwise", "Tree", "Pruned Tree", "Forest", "GBS", "knn")
+colnames(green_rmse) = c("Linear", "Stepwise", "Tree", "Pruned Tree", "Forest", "GBM", "knn")
 rownames(green_rmse) = "RMSE"
 kable(green_rmse)
 
 #partialPlot(green.forest, as.data.frame(green_test), 'green_certified', las=1)
 ```
 
+Modeling started with combining the LEED and EnergyStar to create a green_certified 
+column. Also removed the null variables. Created a train test split with 80 percent
+of the data being the training set data and 20 percent being the testing set data.
+
+In terms of the types of models we started with a linear regression model. After that
+using the stepwise variable selection computed the best set of variables and the
+interaction between them which performed the best. That became the second model. Next,
+experimented with a tree model by considering all the variables except LEED, Energystar
+because LEED and Energystar is already considered under the green_certified and including
+it would create multicollinearity issues. We also adopted the pruning method to test
+trees with different configurations which increased the performance of the tree model.
+Used the random forest models without the variables LEED and Energystar as the next model
+and saw a significant improvment in the model performance. Gradient Boosting model was
+selected next with distribution as "gaussian", the number of trees as 10000, shrinkage as 0.01,
+and with a interaction depth of 4. This model gave a similar performance as the random forest 
+model. At last we chose a knn model and calculated a model for each k value from 300 to 495 with
+a difference of 5. Found the best k value which has the best performance.
+
+In the end compared all these selected models with the rmse values and this can be seen on the
+table above. 
+
+Since the random forest model performed the best, chose this model to draw a partial plot with.
+As seen in the graph above a green_certified building generates 3 dollars more in revenue on
+average compared to a non green_certified building per square foot per year. 
 
 ## Predictive model building: California housing
 
 ```{r}
-library(ggmap)
 CAhousing = read_csv("CAhousing.csv")
 CAmap = get_map("california", zoom=4)
 
@@ -237,33 +266,38 @@ modelr::rmse(CAhousing.tree, CAhousing_test),
 modelr::rmse(CAhousing.prune, CAhousing_test),
 modelr::rmse(CAhousing.forest, CAhousing_test),
 modelr::rmse(CAhousing.gbs, CAhousing_test))
-colnames(CAhousing_rmse) = c("Linear", "Stepwise", "Tree", "Pruned Tree", "Forest", "GBS")
+colnames(CAhousing_rmse) = c("Linear", "Stepwise", "Tree", "Pruned Tree", "Forest", "GBM")
 rownames(CAhousing_rmse) = "RMSE"
 kable(CAhousing_rmse)
-#proceed with GBS model
+#proceed with GBM model
 ```
+
+We choose the gradiented boosted model that has `housingMedianAge`, `totalRooms`, `totalBedrooms`, `population`, `households`, and `medianIncome` as the features. The plots are below.
 
 ```{r}
 CAmap = get_map("california", zoom=6)
+```
+
+```{r}
 ggmap(CAmap) + 
-  geom_point(aes(x = longitude, y = latitude, color = medianHouseValue), data = CAhousing, alpha = .4) +
-  labs(x = 'Longitude', y = 'Latitude', title = "",
-       subtitle = '')
+  geom_point(aes(x = longitude, y = latitude, color = medianHouseValue/100000), data = CAhousing, alpha = .4) +
+  labs(x = 'Longitude', y = 'Latitude', title = "Median House Values in California", 
+       color = 'in 100,000 Dollars')
 ```
 
 ```{r}
 CApredict = CAhousing %>% mutate(predictedMedianHouseValue = predict.gbm(CAhousing.gbs, newdata = CAhousing))
 ggmap(CAmap) + 
-  geom_point(aes(x = longitude, y = latitude, color = predictedMedianHouseValue), data = CApredict, alpha = .4) +
-  labs(x = 'Longitude', y = 'Latitude', title = "",
-       subtitle = '')
+  geom_point(aes(x = longitude, y = latitude, color = predictedMedianHouseValue/100000), data = CApredict, alpha = .4) +
+  labs(x = 'Longitude', y = 'Latitude', title = "Predicted Median House Values in California", 
+       color = 'in 100,000 Dollars')
 ```
 
 ```{r}
 CApredict = CApredict %>% mutate(residuals = medianHouseValue - predictedMedianHouseValue)
 ggmap(CAmap) + 
-  geom_point(aes(x = longitude, y = latitude, color = residuals), data = CApredict, alpha = .4) +
-  labs(x = 'Longitude', y = 'Latitude', title = "",
-       subtitle = '')
+  geom_point(aes(x = longitude, y = latitude, color = residuals/100000), data = CApredict, alpha = .4) +
+  labs(x = 'Longitude', y = 'Latitude', title = "Residuals of the Predictions",
+       color = 'in 100,000 Dollars')
 ```
 
