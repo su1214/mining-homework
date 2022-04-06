@@ -354,8 +354,6 @@ CAhousing.tree = rpart(medianHouseValue ~ housingMedianAge + totalRooms +
 
 #rpart.plot(CAhousing.tree, digits=-5, type=4, extra=1)
 
-cp_1se(CAhousing.tree)
-
 CAhousing.prune = prune_1se(CAhousing.tree)
 
 # Random Forest
