@@ -394,12 +394,16 @@ rownames(green_rmse) = "RMSE"
 kable(green_rmse)
 ```
 
-Since the random forest model performed the best, we decided to draw a partial dependence plot on `green_certified` with this.
-As seen in the graph below, a green_certified building generates 3 dollars more in revenue on
-average compared to a non green_certified building per square foot per year.
+Since the gradient boosted model performed the best, we calculated the difference of the predicted revenue for `green_certified == 1` and `green_certified == 0` to calculate the partial dependence of the green certification. 
+On average, a green_certified building generates `r filter(green_test, green_certified == 1)[, 'revenue'] %>% mean - 
+filter(green_test, green_certified == 0)[, 'revenue'] %>% mean` dollars more in revenue, per square foot per year, 
+compared to a non green_certified building.
 
 ```{r}
-partialPlot(green.forest, as.data.frame(green_test), 'green_certified', las=1)
+#partialPlot(green.forest, as.data.frame(green_test), 'green_certified', las=1)
+green_test = green_test %>% mutate(predicted = predict(green.gbs, newdata = green_test, type = 'response'))
+filter(green_test, green_certified == 1)[, 'revenue'] %>% mean - 
+filter(green_test, green_certified == 0)[, 'revenue'] %>% mean
 ```
 
 ## Predictive model building: California housing

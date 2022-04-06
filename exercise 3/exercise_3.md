@@ -7,11 +7,7 @@
     “Police” when there is no reason to believe there is a causal
     relationship.
 
-How were the researchers from UPenn able to isolate this effect? Briefly
-describe their approach and discuss their result in the “Table 2” below,
-from the researchers’ paper.
-
-1.  The researchers from UPenn were able to isolate this effect because
+2.  The researchers from UPenn were able to isolate this effect because
     the District of Columbia had the policy where they increased
     “Police” when there is an increased risk of terrorism, which is
     believed to be unrelated to the street crime rates. The result in
@@ -21,7 +17,7 @@ from the researchers’ paper.
     risk decreased the crime rates. This holds true even after
     controlling for the ridership of Metro.
 
-2.  They had to control for Metro ridership because, if “Crime”
+3.  They had to control for Metro ridership because, if “Crime”
     decreased because there were less people on the streets, that would
     not neccesarily mean the rate of crime decreasing because of the
     increased number of cops. This would be of concern if people stayed
@@ -29,7 +25,7 @@ from the researchers’ paper.
     be true. They were trying to capture the effect of the decrease of
     normal human activity in the city on the number of crime incidents.
 
-3.  The model being estimated here is the effect of “High Alert”,
+4.  The model being estimated here is the effect of “High Alert”,
     controlled for “Midday Ridership”, by districts (if it is district 1
     or not). The conclusion is that the effect of “High Alert” is only
     significant in the first police district area.
@@ -164,13 +160,14 @@ the out-of sample rmse values. The table for this is below.
 |:-----|---------:|---------:|---------:|------------:|---------:|--------:|---------:|
 | RMSE | 1089.988 | 1081.185 | 1613.272 |    381.9242 | 259.7799 | 212.712 | 1254.733 |
 
-Since the random forest model performed the best, we decided to draw a
-partial dependence plot on `green_certified` with this. As seen in the
-graph below, a green_certified building generates 3 dollars more in
-revenue on average compared to a non green_certified building per square
-foot per year.
+Since the gradient boosted model performed the best, we calculated the
+difference of the predicted revenue for `green_certified == 1` and
+`green_certified == 0` to calculate the partial dependence of the green
+certification. On average, a green_certified building generates
+193.2565864 dollars more in revenue, per square foot per year, compared
+to a non green_certified building.
 
-![](exercise_3_files/figure-markdown_github/unnamed-chunk-13-1.png)
+    ## [1] 193.2566
 
 ## Predictive model building: California housing
 
