@@ -1,0 +1,39 @@
+---
+title: "ECO395M: Exercise 4"
+author: "Steven Kim and Shreekara Shastry"
+date: ""
+output:
+  md_document:
+    variant: markdown_github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, cache = TRUE)
+library(tidyverse)
+library(knitr)
+library(rsample)
+library(pdp)
+library(rpart)
+library(rpart.plot)
+library(gbm)
+library(randomForest)
+library(foreach)
+library(ggmap)
+library(caret)
+```
+## Clustering and PCA
+
+```{r}
+wine = read.csv("wine.csv")
+```
+
+## Market Segmentation
+
+```{r}
+greenbuildings = read.csv("social_marketing.csv") %>% drop_na()
+```
+
+## Association rules for grocery purchase
+```{r}
+
+```
