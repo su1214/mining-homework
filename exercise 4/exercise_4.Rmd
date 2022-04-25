@@ -25,6 +25,63 @@ library(caret)
 
 ```{r}
 wine = read.csv("wine.csv")
+
+Y = cars[,-(1:9)]
+# center and scale the data
+X = wine[,(1:11)]
+X = scale(X, center=TRUE, scale=TRUE)
+
+mu = attr(X, "scaled:center")
+sigma = attr(X, "scaled:scale")
+
+# 6 clusters and 25 starts
+clust1 = kmeans(X, 6, nstart=25)
+
+clust1$center[1,]*sigma + mu
+clust1$center[2,]*sigma + mu
+clust1$center[4,]*sigma + mu
+
+# which(clust1$cluster == 1)
+# which(clust1$cluster == 2)
+# which(clust1$cluster == 3)
+# which(clust1$cluster == 4)
+# which(clust1$cluster == 5)
+# which(clust1$cluster == 6)
+
+qplot(quality, data=wine, color=factor(clust1$cluster))
+qplot(color, alcohol, data=wine, color=factor(clust1$cluster))
+
+# PCA
+Z = wine[,c(1,11)]
+Z = scale(Z, center=TRUE, scale=FALSE)
+
+plot(Z)
+
+v_try = rnorm(2)
+v_try = v_try/sqrt(sum(v_try^2))
+
+plot(Z, pch=19, col=rgb(0.3,0.3,0.3,0.3))
+segments(0, 0, v_try[1], v_try[2], col='red', lwd=4)
+
+slope = v_try[2]/v_try[1]
+abline(0, slope)
+
+par(mfrow=c(1,2))
+plot(Z, pch=19, col=rgb(0.3,0.3,0.3,0.3),
+     xlim=c(-2.5,2.5), ylim=c(-2.5,2.5))
+slope = v_try[2]/v_try[1]
+abline(0, slope)
+
+alpha = Z %*% v_try  # inner product of each row with v_try
+z_hat = alpha %*% v_try  # locations in R^2
+points(z_hat, col='blue', pch=4)
+segments(0, 0, v_try[1], v_try[2], col='red', lwd=4)
+
+hist(alpha, 25, xlim=c(-3,3), main=round(var(alpha), 2))
+
+pc_Z = prcomp(Z, rank=1)
+
+pc_Z$rotation
 ```
 
 ## Market Segmentation
