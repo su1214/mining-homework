@@ -78,7 +78,7 @@ plot(social_clust, cex=0.8)
 social_cluster = cutree(social_clust, k=2)
 summary(factor(social_cluster))
 
-# k-means clustering - Meep
+# k-means clustering
 social_top10 = head(sort(colSums(social[,-1]), decreasing = TRUE), 11)
 social_top10 = subset(social[,-1][, names(social_top10)], select = -chatter)
 
@@ -92,8 +92,31 @@ c(k=k, CH=CH)} %>% as.data.frame
 ggplot(SSE_grid) +
   geom_line(aes(x=k, y=CH))
 
-SocialCluster = kmeans(social[,-1], 3, nstart=50)
-fviz_cluster(SocialCluster, social[,-1])
+socialCluster = kmeans(social[,-1], centers = 3, nstart=50)
+fviz_cluster(socialCluster, social[,-1])
+
+socialClust = rename(merge(social[,-1], socialCluster$cluster, by="row.names"), cluster = y)
+
+socialClusterTable = socialClust %>%
+  group_by(cluster) %>%
+  select(-Row.names) %>%
+  summarize_all(sum) %>%
+  select(-c(cluster, chatter, uncategorized))
+
+socialClusterTable = t(as.data.frame(socialClusterTable))
+
+socialClusterTable = tibble::rownames_to_column(socialClusterTable %>% as.data.frame())
+
+names(socialClusterTable) = c("Category", "Cluster1", "Cluster2", "Cluster3")
+
+top_n(socialClusterTable, n=5, Cluster1) %>% ggplot() + 
+  geom_col(aes(x=Category, y=Cluster1 )) + coord_flip()
+
+top_n(socialClusterTable, n=5, Cluster2) %>% ggplot() + 
+  geom_col(aes(x=Category, y=Cluster2 )) + coord_flip()
+
+top_n(socialClusterTable, n=5, Cluster3) %>% ggplot() + 
+  geom_col(aes(x=Category, y=Cluster3 )) + coord_flip()
 ```
 
 ## Association rules for grocery purchase
