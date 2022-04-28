@@ -13,6 +13,8 @@ library(tidyverse)
 library(knitr)
 library(ggfortify)
 library(foreach)
+library(arules)
+library(arulesViz)
 ```
 
 ## Clustering and PCA
@@ -46,6 +48,7 @@ ggplot(SSE_grid) +
 #choose k=10
 Clusterwine = kmeans(wine2, 10, nstart=50)
 qplot(quality, color, data=wine, color=factor(Clusterwine$cluster))
+plot(wine2, col = wine$color)
 ```
 
 ## Market Segmentation
@@ -56,5 +59,50 @@ greenbuildings = read.csv("social_marketing.csv") %>% drop_na()
 
 ## Association rules for grocery purchase
 ```{r}
+groceries_raw = readLines('groceries.txt')
+groceries = as.list(strsplit(groceries_raw, ","))
+groceries = lapply(groceries, unique)
 
+
+## Cast this resulting list of playlists as a special arules "transactions" class.
+grocerytrans = as(groceries, "transactions")
+summary(grocerytrans)
+
+# Now run the 'apriori' algorithm
+# Look at rules with support > .01 & confidence >.1 & length (# artists) <= 5
+groceryrules = apriori(grocerytrans, 
+	parameter=list(support=.01, confidence=.1, maxlen=2))
+                         
+# Look at the output... so many rules!
+inspect(groceryrules)
+
+summary(groceryrules)
+
+## Choose a subset
+inspect(subset(groceryrules, lift > 2 & confidence > 0.35))
+
+### started from values near the max, and lowered to have around 5.
+
+# plot all the rules in (support, confidence) space
+# notice that high lift rules tend to have low support
+plot(groceryrules)
+
+# can swap the axes and color scales
+plot(groceryrules, measure = c("support", "lift"), shading = "confidence")
+
+# "two key" plot: coloring is by size (order) of item set ???
+plot(groceryrules, method='two-key plot')
+
+# can now look at subsets driven by the plot
+inspect(subset(groceryrules, support > 0.035))
+inspect(subset(groceryrules, confidence > 0.6))
+
+
+# graph-based visualization
+sub1 = subset(groceryrules, subset=confidence > 0.01 & support > 0.005)
+summary(sub1)
+plot(sub1, method='graph')
+?plot.rules
+
+plot(head(sub1, 100, by='lift'), method='graph')
 ```
