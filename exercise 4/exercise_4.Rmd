@@ -134,7 +134,7 @@ ggscatter(
 
 ## Market Segmentation
 
-```{r market_segmentation}
+```{r market_segmentation, results = 'hide'}
 social = read.csv("social_marketing.csv") %>% drop_na()
 
 # Let's see which category has the most amount of tweets
@@ -201,7 +201,7 @@ top_n(socialClusterTable, n=5, Cluster3) %>% ggplot() +
 
 ## Association rules for grocery purchase
 
-```{r groceries}
+```{r groceries, results = 'hide'}
 groceries_raw = readLines('groceries.txt')
 groceries = as.list(strsplit(groceries_raw, ","))
 groceries = lapply(groceries, unique)
