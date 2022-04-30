@@ -134,7 +134,7 @@ ggscatter(
 
 ## Market Segmentation
 
-```{r market_segmentation}
+```{r market_segmentation, include=FALSE}
 social = read.csv("social_marketing.csv") %>% drop_na()
 
 # Let's see which category has the most amount of tweets
@@ -201,7 +201,7 @@ top_n(socialClusterTable, n=5, Cluster3) %>% ggplot() +
 
 ## Association rules for grocery purchase
 
-```{r groceries}
+```{r groceries, include=FALSE}
 groceries_raw = readLines('groceries.txt')
 groceries = as.list(strsplit(groceries_raw, ","))
 groceries = lapply(groceries, unique)
@@ -219,10 +219,10 @@ groceryrules = apriori(grocerytrans,
 # Look at the output... so many rules!
 #inspect(groceryrules)
 
-#summary(groceryrules)
+summary(groceryrules)
 
 ## Choose a subset
-#inspect(subset(groceryrules, lift > 2 & confidence > 0.35))
+inspect(subset(groceryrules, lift > 2 & confidence > 0.35))
 
 ### started from values near the max, and lowered to have around 5.
 
@@ -237,12 +237,12 @@ plot(groceryrules, measure = c("support", "lift"), shading = "confidence")
 plot(groceryrules, method='two-key plot')
 
 # can now look at subsets driven by the plot
-#inspect(subset(groceryrules, support > 0.04))
-#inspect(subset(groceryrules, confidence > 0.4))
+inspect(subset(groceryrules, support > 0.04))
+inspect(subset(groceryrules, confidence > 0.4))
 
 # graph-based visualization
 sub1 = subset(groceryrules, subset=confidence > 0.01 & support > 0.005)
-#summary(sub1)
+summary(sub1)
 plot(head(sub1, 100, by='lift'), method='graph')
 ```
 
