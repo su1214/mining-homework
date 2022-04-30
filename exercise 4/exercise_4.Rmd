@@ -16,13 +16,21 @@ library(foreach)
 library(arules)
 library(arulesViz)
 library(factoextra)
+library(ggpubr)
 ```
 
 ## Clustering and PCA
 
-```{r}
+We first ran PCA on those 11 chemical properties.
+
+```{r winedata}
+#reading the data and initial treatment
 wine = read.csv("wine.csv")
 wine$color = wine$color %>% as.factor
+wine$quality = wine$quality %>% as.factor
+```
+
+```{r winepca}
 wine1 = wine[,1:11]
 PCAwine = prcomp(wine1, scale=TRUE, rank=3)
 
@@ -34,27 +42,99 @@ autoplot(PCAwine, data = wine, colour = 'color')
 autoplot(PCAwine, data = wine, colour = 'quality', alpha = .9, 
          loadings = TRUE, loadings.colour = 'pink',
          loadings.label = TRUE, loadings.label.size = 3)
+```
 
-wine2 = scale(wine[,1:11]) # cluster on measurables k_grid = seq(2, 30, by=1)
-N = nrow(wine2)
-k_grid = seq(2, 30, by=1)
-SSE_grid = foreach(k = k_grid, .combine='rbind') %do% {
-cluster_k = kmeans(wine2, k, nstart=50)
-W = cluster_k$tot.withinss
-B = cluster_k$betweenss
-CH = (B/W)*((N-k)/(k-1))
-c(k=k, CH=CH)} %>% as.data.frame
-ggplot(SSE_grid) +
-  geom_line(aes(x=k, y=CH))
+From the first graph, we can see that red and white wines have pretty different principal components. 
+That is, we can easily distinguish
+
+```{r wineclustering}
+wine2 = scale(wine[,1:11])
+
+# cluster on measurables k_grid = seq(2, 30, by=1)
+# N = nrow(wine2)
+# k_grid = seq(2, 30, by=1)
+# SSE_grid = foreach(k = k_grid, .combine='rbind') %do% {
+# cluster_k = kmeans(wine2, k, nstart=50)
+# W = cluster_k$tot.withinss
+# B = cluster_k$betweenss
+# CH = (B/W)*((N-k)/(k-1))
+# c(k=k, CH=CH)} %>% as.data.frame
+# ggplot(SSE_grid) +
+#   geom_line(aes(x=k, y=CH))
 #choose k=10
-Clusterwine = kmeans(wine2, 10, nstart=50)
-qplot(quality, color, data=wine, color=factor(Clusterwine$cluster))
-plot(wine2, col = wine$color)
+# Clusterwine = kmeans(wine2, 10, nstart=50)
+
+wineclustered = kmeans(wine2, 2, nstart=50)
+qplot(quality, color, data=wine, color=factor(wineclustered$cluster))
+
+wineclustered$color = wine$color
+# fviz_cluster(wineclustered, data = wine2,
+#              palette = c("#2E9FDF", "#00AFBB"), 
+#              geom = "point", shape = 0,
+#              ellipse.type = "convex", 
+#              ggtheme = theme_bw()
+#              ) + geom_point(aes(shape = wineclustered$color), alpha = 0.5)
+
+wineclustered2 = kmeans(wine2, 7, nstart=50)
+qplot(quality, color, data=wine, color=factor(wineclustered2$cluster))
+
+# wineclustered2$quality = wine$quality %>% as.factor
+# fviz_cluster(wineclustered2, data = wine2,
+#              geom = "point", shape = 0,
+#              ellipse.type = "convex", 
+#              ggtheme = theme_bw()
+#              )
+```
+
+```{r wineclustering-graph1}
+## Using PCA to graph clusters
+#1. colors - two clusters
+# Coordinates of individuals
+wine.coord <- as.data.frame(get_pca_ind(PCAwine)$coord)
+# Add clusters obtained using the K-means algorithm
+wine.coord$cluster <- factor(wineclustered$cluster)
+# Add Species groups from the original data sett
+wine.coord$color <- wine$color
+
+# Percentage of variance explained by dimensions
+eigenvalue <- round(get_eigenvalue(PCAwine), 1)
+variance.percent <- eigenvalue$variance.percent
+
+ggscatter(
+  wine.coord, x = "Dim.1", y = "Dim.2", 
+  color = "cluster", palette = "npg", ellipse = TRUE, ellipse.type = "convex",
+  shape = "color", size = 1.5,  legend = "right", ggtheme = theme_bw(),
+  xlab = paste0("Dim 1 (", variance.percent[1], "% )" ),
+  ylab = paste0("Dim 2 (", variance.percent[2], "% )" )
+)
+
+```
+
+```{r wineclustering-graph2}
+#2. qualities - seven clusters
+# Coordinates of individuals
+wine.coord <- as.data.frame(get_pca_ind(PCAwine)$coord)
+# Add clusters obtained using the K-means algorithm
+wine.coord$cluster <- factor(wineclustered2$cluster)
+# Add Species groups from the original data sett
+wine.coord$quality <- wine$quality
+
+# Percentage of variance explained by dimensions
+eigenvalue <- round(get_eigenvalue(PCAwine), 1)
+variance.percent <- eigenvalue$variance.percent
+
+ggscatter(
+  wine.coord, x = "Dim.1", y = "Dim.2", 
+  color = "cluster", palette = "npg", ellipse = TRUE, ellipse.type = "convex",
+  shape = "quality", size = 1.5,  legend = "right", ggtheme = theme_bw(),
+  xlab = paste0("Dim 1 (", variance.percent[1], "% )" ),
+  ylab = paste0("Dim 2 (", variance.percent[2], "% )" )
+)
 ```
 
 ## Market Segmentation
 
-```{r}
+```{r market_segmentation}
 social = read.csv("social_marketing.csv") %>% drop_na()
 
 # Let's see which category has the most amount of tweets
@@ -87,7 +167,7 @@ SSE_grid = foreach(k = k_grid, .combine='rbind') %do% {
 cluster_k = kmeans(social[,-1], k, nstart=50)
 W = cluster_k$tot.withinss
 B = cluster_k$betweenss
-CH = (B/W)*((N-k)/(k-1))
+CH = (B/W)*((nrow(social[,-1])-k)/(k-1))
 c(k=k, CH=CH)} %>% as.data.frame
 ggplot(SSE_grid) +
   geom_line(aes(x=k, y=CH))
@@ -120,7 +200,8 @@ top_n(socialClusterTable, n=5, Cluster3) %>% ggplot() +
 ```
 
 ## Association rules for grocery purchase
-```{r}
+
+```{r groceries}
 groceries_raw = readLines('groceries.txt')
 groceries = as.list(strsplit(groceries_raw, ","))
 groceries = lapply(groceries, unique)
@@ -128,7 +209,7 @@ groceries = lapply(groceries, unique)
 
 ## Cast this resulting list of playlists as a special arules "transactions" class.
 grocerytrans = as(groceries, "transactions")
-summary(grocerytrans)
+#summary(grocerytrans)
 
 # Now run the 'apriori' algorithm
 # Look at rules with support > .01 & confidence >.1 & length (# artists) <= 5
@@ -136,7 +217,7 @@ groceryrules = apriori(grocerytrans,
 	parameter=list(support=.01, confidence=.1, maxlen=2))
                          
 # Look at the output... so many rules!
-inspect(groceryrules)
+#inspect(groceryrules)
 
 summary(groceryrules)
 
@@ -156,15 +237,13 @@ plot(groceryrules, measure = c("support", "lift"), shading = "confidence")
 plot(groceryrules, method='two-key plot')
 
 # can now look at subsets driven by the plot
-inspect(subset(groceryrules, support > 0.035))
-inspect(subset(groceryrules, confidence > 0.6))
-
+inspect(subset(groceryrules, support > 0.04))
+inspect(subset(groceryrules, confidence > 0.4))
 
 # graph-based visualization
 sub1 = subset(groceryrules, subset=confidence > 0.01 & support > 0.005)
 summary(sub1)
-plot(sub1, method='graph')
-?plot.rules
-
 plot(head(sub1, 100, by='lift'), method='graph')
 ```
+
+Chose the confidence and the support cutoff levels so that the subset have around 25 rows.
