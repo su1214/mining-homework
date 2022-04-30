@@ -242,7 +242,7 @@ plot(groceryrules, method='two-key plot')
 
 # graph-based visualization
 sub1 = subset(groceryrules, subset=confidence > 0.01 & support > 0.005)
-summary(sub1)
+#summary(sub1)
 plot(head(sub1, 100, by='lift'), method='graph')
 ```
 

@@ -62,40 +62,7 @@ different principal components. That is, we can easily distinguish
     ## writing ... [339 rule(s)] done [0.00s].
     ## creating S4 object  ... done [0.00s].
 
-![](exercise_4_files/figure-markdown_github/groceries-1.png)![](exercise_4_files/figure-markdown_github/groceries-2.png)![](exercise_4_files/figure-markdown_github/groceries-3.png)
-
-    ## set of 339 rules
-    ## 
-    ## rule length distribution (lhs + rhs):sizes
-    ##   1   2 
-    ##   8 331 
-    ## 
-    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-    ##   1.000   2.000   2.000   1.976   2.000   2.000 
-    ## 
-    ## summary of quality measures:
-    ##     support          confidence        coverage            lift       
-    ##  Min.   :0.01007   Min.   :0.1007   Min.   :0.02450   Min.   :0.7899  
-    ##  1st Qu.:0.01200   1st Qu.:0.1367   1st Qu.:0.05897   1st Qu.:1.2933  
-    ##  Median :0.01647   Median :0.1922   Median :0.08897   Median :1.5047  
-    ##  Mean   :0.02264   Mean   :0.2156   Mean   :0.12303   Mean   :1.5598  
-    ##  3rd Qu.:0.02430   3rd Qu.:0.2618   3rd Qu.:0.13950   3rd Qu.:1.7834  
-    ##  Max.   :0.25552   Max.   :0.4972   Max.   :1.00000   Max.   :3.0404  
-    ##      count       
-    ##  Min.   :  99.0  
-    ##  1st Qu.: 118.0  
-    ##  Median : 162.0  
-    ##  Mean   : 222.7  
-    ##  3rd Qu.: 239.0  
-    ##  Max.   :2513.0  
-    ## 
-    ## mining info:
-    ##          data ntransactions support confidence
-    ##  grocerytrans          9835    0.01        0.1
-    ##                                                                                          call
-    ##  apriori(data = grocerytrans, parameter = list(support = 0.01, confidence = 0.1, maxlen = 2))
-
-![](exercise_4_files/figure-markdown_github/groceries-4.png)
+![](exercise_4_files/figure-markdown_github/groceries-1.png)![](exercise_4_files/figure-markdown_github/groceries-2.png)![](exercise_4_files/figure-markdown_github/groceries-3.png)![](exercise_4_files/figure-markdown_github/groceries-4.png)
 
 Chose the confidence and the support cutoff levels so that the subset
 have around 25 rows.
