@@ -91,14 +91,6 @@ specific market segment.
 Let’s plot the top 5 categories suggested by each of the clusters used
 in k-means.
 
-    ##         Category Cluster1 Cluster2 Cluster3
-    ## 6       politics     8214     1735     4149
-    ## 3  photo_sharing     7690     2831    10735
-    ## 2         travel     7473     1645     3375
-    ## 5  sports_fandom     7473     1661     3430
-    ## 1 current_events     6851     1694     3485
-    ## 7           food     5846     2489     2680
-
 ![](exercise_4_files/figure-markdown_github/top5_eachCluster-1.png)![](exercise_4_files/figure-markdown_github/top5_eachCluster-2.png)![](exercise_4_files/figure-markdown_github/top5_eachCluster-3.png)
 
 Each clusters give us interesting results,

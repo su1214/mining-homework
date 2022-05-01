@@ -263,10 +263,8 @@ socialClusterTable = tibble::rownames_to_column(socialClusterTable %>% as.data.f
 
 Let's plot the top 5 categories suggested by each of the clusters used in k-means.
 
-```{r top5_eachCluster}
+```{r top5_eachCluster, results='hide'}
 names(socialClusterTable) = c("Category", "Cluster1", "Cluster2", "Cluster3")
-
-head(socialClusterTable[order(-socialClusterTable$Cluster1),])
 
 socialClusterTable %>% mutate(Cluster1= round(Cluster1/sum(Cluster1)*100,2)) %>% top_n(n=10, Cluster1) %>% ggplot() +
   geom_col(aes(x=reorder(Category,-Cluster1), y=Cluster1 ), fill = "#2E9FDF") +
