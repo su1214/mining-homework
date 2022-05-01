@@ -160,21 +160,40 @@ ggscatter(
 
 ## Market Segmentation
 
+Importing the data
 ```{r market_segmentation, results = 'hide'}
 social = read.csv("social_marketing.csv") %>% drop_na()
+```
 
+Let's get some useful information about the market. In this code snippet we are
+checking which are the top 5 popular tweet categories.
+```{r top5tweets}
 # Let's see which category has the most amount of tweets
 colTotals = colSums(social[,-1], na.rm = TRUE) %>% as.data.frame()
 names(colTotals) = c('Total')
 
-colTotals %>% arrange(desc(Total)) %>% head()
+kable(colTotals %>% arrange(desc(Total)) %>% head())
+```
+Ignoring chatter sinxe it doesn't belong to any single category. `Photo sharing`,
+`health_nutrition`, `cooking`,  `politics`, `sports_fandom` are the top 4 popular
+tweet categories in the dataset.
 
-# PCA - Meep
+Let's try to run a standard PCA algoritm on the data
+```{r pca, results='hide'}
+# PCA
 socialPCA = prcomp(social[,-1], scale=TRUE, rank=3)
-autoplot(socialPCA)
+autoplot(socialPCA) +
+  labs(title = "PCA graph on Market Segments")
 summary(socialPCA)
+```
+standard PCA doesn't really help in this case because we are not looking into a specific 
+category of tweet. But grouping them into clusters along with this graph can show us
+the categories that are grouped together.
 
-# Clustering hclust - Meep
+Let's do a hierarchical clustering model and see if we can group the categories together
+to get a more idea about the broader market segments.
+```{r hcluster, results='hide'}
+# Clustering hclust
 social_scaled = scale(social[,-1], center = TRUE, scale = TRUE)
 social_distance_matrix = dist(social_scaled, method='euclidean')
 
@@ -183,11 +202,16 @@ plot(social_clust, cex=0.8)
 
 social_cluster = cutree(social_clust, k=2)
 summary(factor(social_cluster))
+```
+The cluster dendogram which uses the euclidean distance and the average distance to group
+doesn't give us any information about the marget segments in general.
 
+Now let's perform k-means cluster which I think coupled with the PCA methods will give
+a meaningful market segments. First step is to find the optimal value for k that
+we should use in the `kmeans` method. For each value of `k`, calculate the `withiness`,
+`betweeness` and `CH-Index` from these values. This can help us get the optimal value of `k`.
+```{r clusterBtwness}
 # k-means clustering
-social_top10 = head(sort(colSums(social[,-1]), decreasing = TRUE), 11)
-social_top10 = subset(social[,-1][, names(social_top10)], select = -chatter)
-
 k_grid = seq(1, 11, by=1)
 SSE_grid = foreach(k = k_grid, .combine='rbind') %do% {
 cluster_k = kmeans(social[,-1], k, nstart=50)
@@ -196,11 +220,27 @@ B = cluster_k$betweenss
 CH = (B/W)*((nrow(social[,-1])-k)/(k-1))
 c(k=k, CH=CH)} %>% as.data.frame
 ggplot(SSE_grid) +
-  geom_line(aes(x=k, y=CH))
+  geom_line(aes(x=k, y=CH)) +
+  labs(title = "CH-Index change over different values of k")
+```
+We decided to go with `k=3`. I think the improvement stops after `k=3`.
 
+```{r kmeans_cluster}
 socialCluster = kmeans(social[,-1], centers = 3, nstart=50)
-fviz_cluster(socialCluster, social[,-1])
+fviz_cluster(socialCluster, social[,-1],
+             palette = c("#2E9FDF", "#00AFBB", "#C8E1AB"),
+             geom = "point",
+             ellipse.type = "convex",
+             ggtheme = theme_bw()
+             )
+```
+This plot shows how the clusters divide the PCA plot and looks like each of these 
+graphs have different categories. let's analyze more on that. We start by selecting 
+the k-means cluster and grouping them by the cluster and calculate the sum of the 
+number of tweets. Also remove the `cluster`, `chatter`, and `uncategorized` as they
+are not a part of any specific market segment. 
 
+```{r kmeans_analysis}
 socialClust = rename(merge(social[,-1], socialCluster$cluster, by="row.names"), cluster = y)
 
 socialClusterTable = socialClust %>%
@@ -212,18 +252,37 @@ socialClusterTable = socialClust %>%
 socialClusterTable = t(as.data.frame(socialClusterTable))
 
 socialClusterTable = tibble::rownames_to_column(socialClusterTable %>% as.data.frame())
+```
 
+Let's plot the top 5 categories suggested by each of the clusters used in k-means.
+```{r top5_eachCluster}
 names(socialClusterTable) = c("Category", "Cluster1", "Cluster2", "Cluster3")
 
-top_n(socialClusterTable, n=5, Cluster1) %>% ggplot() + 
-  geom_col(aes(x=Category, y=Cluster1 )) + coord_flip()
+head(socialClusterTable[order(-socialClusterTable$Cluster1),])
 
-top_n(socialClusterTable, n=5, Cluster2) %>% ggplot() + 
-  geom_col(aes(x=Category, y=Cluster2 )) + coord_flip()
+socialClusterTable %>% mutate(Cluster1= round(Cluster1/sum(Cluster1)*100,2)) %>% top_n(n=10, Cluster1) %>% ggplot() +
+  geom_col(aes(x=reorder(Category,-Cluster1), y=Cluster1 ), fill = "#2E9FDF") +
+  labs(y = "Percentage", x="Tweet Categories", 
+       title = "Top 10 categories within Cluster 1 by the proportion of tweets")
 
-top_n(socialClusterTable, n=5, Cluster3) %>% ggplot() + 
-  geom_col(aes(x=Category, y=Cluster3 )) + coord_flip()
+socialClusterTable %>% mutate(Cluster2= round(Cluster2/sum(Cluster2)*100,2)) %>% top_n(n=10, Cluster2) %>% ggplot() + 
+  geom_col(aes(x=reorder(Category,-Cluster2), y=Cluster2 ), fill = "#00AFBB") +
+  labs(y = "Percentage", x="Tweet Categories", 
+       title = "Top 10 categories within Cluster 2 by the proportion of tweets")
+
+socialClusterTable %>% mutate(Cluster2= round(Cluster2/sum(Cluster2)*100,2)) %>% top_n(n=10, Cluster3) %>% ggplot() + 
+  geom_col(aes(x=reorder(Category,-Cluster3), y=Cluster3 ), fill = "#C8E1AB") +
+  labs(y = "Percentage", x="Tweet Categories", 
+       title = "Top 10 categories within Cluster 3 by the proportion of tweets")
 ```
+Each clusters give us interesting results,
+
+* `Cluster1` - All the top 10 categories shown in the graph share similar percentage of the number of tweets between 4-6%. This category is representative of majority of the population. 
+* `Cluster2` - `photo_sharing`, `cooking`, `shopping`, and `college_uni`, the top 4 categories form a market category.
+I think this is representative of the young and college students.
+* `Cluster3` - `health_nutrition`, `personal_fitness` and `cooking` forms separate market segement. This is a separate `health` market segment. 
+
+We also see a lot of overlaps in the tweet categories between the different clusters which is expected but `k-means` manages to extract some useful information about the `market categories` of people using the `NutrientH20` product. Based on this we suggest that they target `college_students`, `younger audience` and people into `personal_fitness` and `healthy living`.
 
 ## Association rules for grocery purchase
 
