@@ -160,7 +160,6 @@ ggscatter(
 
 ## Market Segmentation
 
-Importing the data
 ```{r market_segmentation, results = 'hide'}
 social = read.csv("social_marketing.csv") %>% drop_na()
 ```
@@ -175,11 +174,11 @@ names(colTotals) = c('Total')
 kable(colTotals %>% arrange(desc(Total)) %>% head())
 ```
 
-Ignoring chatter sinxe it doesn't belong to any single category. `Photo sharing`,
+Ignoring chatter since it doesn't belong to any single category. `Photo sharing`,
 `health_nutrition`, `cooking`,  `politics`, `sports_fandom` are the top 4 popular
 tweet categories in the dataset.
 
-Let's try to run a standard PCA algoritm on the data
+Let's try to run a standard PCA algoritm on the data.
 
 ```{r pca, results='hide'}
 # PCA
@@ -189,7 +188,7 @@ autoplot(socialPCA) +
 summary(socialPCA)
 ```
 
-standard PCA doesn't really help in this case because we are not looking into a specific 
+The standard PCA doesn't really help in this case because we are not looking into a specific 
 category of tweet. But grouping them into clusters along with this graph can show us
 the categories that are grouped together.
 
@@ -211,7 +210,7 @@ summary(factor(social_cluster))
 The cluster dendogram which uses the euclidean distance and the average distance to group
 doesn't give us any information about the marget segments in general.
 
-Now let's perform k-means cluster which I think coupled with the PCA methods will give
+Now let's perform k-means clustering which I think coupled with the PCA methods will give
 a meaningful market segments. First step is to find the optimal value for k that
 we should use in the `kmeans` method. For each value of `k`, calculate the `withiness`,
 `betweeness` and `CH-Index` from these values. This can help us get the optimal value of `k`.

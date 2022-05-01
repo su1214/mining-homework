@@ -33,8 +33,6 @@ are many points that are in different clusters with the same quality.
 
 ## Market Segmentation
 
-Importing the data
-
 Let’s get some useful information about the market. In this code snippet
 we are checking which are the top 5 popular tweet categories.
 
@@ -47,17 +45,18 @@ we are checking which are the top 5 popular tweet categories.
 | politics         | 14098 |
 | sports_fandom    | 12564 |
 
-Ignoring chatter sinxe it doesn’t belong to any single category.
+Ignoring chatter since it doesn’t belong to any single category.
 `Photo sharing`, `health_nutrition`, `cooking`, `politics`,
 `sports_fandom` are the top 4 popular tweet categories in the dataset.
 
-Let’s try to run a standard PCA algoritm on the data
+Let’s try to run a standard PCA algoritm on the data.
 
 ![](exercise_4_files/figure-markdown_github/pca-1.png)
 
-standard PCA doesn’t really help in this case because we are not looking
-into a specific category of tweet. But grouping them into clusters along
-with this graph can show us the categories that are grouped together.
+The standard PCA doesn’t really help in this case because we are not
+looking into a specific category of tweet. But grouping them into
+clusters along with this graph can show us the categories that are
+grouped together.
 
 Let’s do a hierarchical clustering model and see if we can group the
 categories together to get a more idea about the broader market
@@ -69,7 +68,7 @@ The cluster dendogram which uses the euclidean distance and the average
 distance to group doesn’t give us any information about the marget
 segments in general.
 
-Now let’s perform k-means cluster which I think coupled with the PCA
+Now let’s perform k-means clustering which I think coupled with the PCA
 methods will give a meaningful market segments. First step is to find
 the optimal value for k that we should use in the `kmeans` method. For
 each value of `k`, calculate the `withiness`, `betweeness` and
