@@ -52,14 +52,19 @@ Ignoring chatter sinxe it doesn’t belong to any single category.
 `sports_fandom` are the top 4 popular tweet categories in the dataset.
 
 Let’s try to run a standard PCA algoritm on the data
-![](exercise_4_files/figure-markdown_github/pca-1.png) standard PCA
-doesn’t really help in this case because we are not looking into a
-specific category of tweet. But grouping them into clusters along with
-this graph can show us the categories that are grouped together.
+
+![](exercise_4_files/figure-markdown_github/pca-1.png)
+
+standard PCA doesn’t really help in this case because we are not looking
+into a specific category of tweet. But grouping them into clusters along
+with this graph can show us the categories that are grouped together.
 
 Let’s do a hierarchical clustering model and see if we can group the
 categories together to get a more idea about the broader market
-segments. ![](exercise_4_files/figure-markdown_github/hcluster-1.png)
+segments.
+
+![](exercise_4_files/figure-markdown_github/hcluster-1.png)
+
 The cluster dendogram which uses the euclidean distance and the average
 distance to group doesn’t give us any information about the marget
 segments in general.
@@ -69,14 +74,18 @@ methods will give a meaningful market segments. First step is to find
 the optimal value for k that we should use in the `kmeans` method. For
 each value of `k`, calculate the `withiness`, `betweeness` and
 `CH-Index` from these values. This can help us get the optimal value of
-`k`. ![](exercise_4_files/figure-markdown_github/clusterBtwness-1.png)
+`k`.
+
+![](exercise_4_files/figure-markdown_github/clusterBtwness-1.png)
+
 We decided to go with `k=3`. I think the improvement stops after `k=3`.
 
-![](exercise_4_files/figure-markdown_github/kmeans_cluster-1.png) This
-plot shows how the clusters divide the PCA plot and looks like each of
-these graphs have different categories. let’s analyze more on that. We
-start by selecting the k-means cluster and grouping them by the cluster
-and calculate the sum of the number of tweets. Also remove the
+![](exercise_4_files/figure-markdown_github/kmeans_cluster-1.png)
+
+This plot shows how the clusters divide the PCA plot and looks like each
+of these graphs have different categories. let’s analyze more on that.
+We start by selecting the k-means cluster and grouping them by the
+cluster and calculate the sum of the number of tweets. Also remove the
 `cluster`, `chatter`, and `uncategorized` as they are not a part of any
 specific market segment.
 
@@ -92,6 +101,7 @@ in k-means.
     ## 7           food     5846     2489     2680
 
 ![](exercise_4_files/figure-markdown_github/top5_eachCluster-1.png)![](exercise_4_files/figure-markdown_github/top5_eachCluster-2.png)![](exercise_4_files/figure-markdown_github/top5_eachCluster-3.png)
+
 Each clusters give us interesting results,
 
 -   `Cluster1` - All the top 10 categories shown in the graph share
