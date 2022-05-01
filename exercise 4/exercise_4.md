@@ -127,6 +127,25 @@ probability of 0.4, it’s pretty meaningful. The table below shows the
 rules with lift higher than 4 out of all the rules with the parameters I
 specified.
 
+|        | lhs                                               |     | rhs                |   support | confidence |  coverage |     lift | count |
+|:-------|:--------------------------------------------------|:----|:-------------------|----------:|-----------:|----------:|---------:|------:|
+| \[1\]  | {liquor}                                          | =>  | {bottled beer}     | 0.0046772 |  0.4220183 | 0.0110829 | 5.240594 |    46 |
+| \[2\]  | {herbs, other vegetables}                         | =>  | {root vegetables}  | 0.0038638 |  0.5000000 | 0.0077275 | 4.587220 |    38 |
+| \[3\]  | {herbs, whole milk}                               | =>  | {root vegetables}  | 0.0041688 |  0.5394737 | 0.0077275 | 4.949369 |    41 |
+| \[4\]  | {chicken, citrus fruit}                           | =>  | {root vegetables}  | 0.0030503 |  0.4411765 | 0.0069141 | 4.047547 |    30 |
+| \[5\]  | {beef, citrus fruit}                              | =>  | {root vegetables}  | 0.0038638 |  0.4578313 | 0.0084392 | 4.200346 |    38 |
+| \[6\]  | {beef, tropical fruit}                            | =>  | {root vegetables}  | 0.0037621 |  0.4933333 | 0.0076258 | 4.526057 |    37 |
+| \[7\]  | {beef, soda}                                      | =>  | {root vegetables}  | 0.0039654 |  0.4875000 | 0.0081342 | 4.472540 |    39 |
+| \[8\]  | {onions, other vegetables, whole milk}            | =>  | {root vegetables}  | 0.0032537 |  0.4923077 | 0.0066090 | 4.516648 |    32 |
+| \[9\]  | {curd, tropical fruit, whole milk}                | =>  | {yogurt}           | 0.0039654 |  0.6093750 | 0.0065074 | 4.368224 |    39 |
+| \[10\] | {butter, other vegetables, yogurt}                | =>  | {tropical fruit}   | 0.0030503 |  0.4761905 | 0.0064057 | 4.538114 |    30 |
+| \[11\] | {other vegetables, pip fruit, yogurt}             | =>  | {tropical fruit}   | 0.0035587 |  0.4375000 | 0.0081342 | 4.169392 |    35 |
+| \[12\] | {citrus fruit, root vegetables, tropical fruit}   | =>  | {other vegetables} | 0.0044738 |  0.7857143 | 0.0056940 | 4.060694 |    44 |
+| \[13\] | {citrus fruit, other vegetables, tropical fruit}  | =>  | {root vegetables}  | 0.0044738 |  0.4943820 | 0.0090493 | 4.535678 |    44 |
+| \[14\] | {citrus fruit, other vegetables, root vegetables} | =>  | {tropical fruit}   | 0.0044738 |  0.4313725 | 0.0103711 | 4.110997 |    44 |
+| \[15\] | {citrus fruit, other vegetables, whole milk}      | =>  | {root vegetables}  | 0.0057956 |  0.4453125 | 0.0130147 | 4.085493 |    57 |
+| \[16\] | {other vegetables, rolls/buns, tropical fruit}    | =>  | {root vegetables}  | 0.0035587 |  0.4545455 | 0.0078292 | 4.170200 |    35 |
+
 It’s interesting to see that if a person buys `liquor`, that person is
 likely to buy `bottled beer` as well, which makes a lot of sense. There
 are many rules with `root vegetables` on the right hand side.
