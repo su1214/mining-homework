@@ -327,9 +327,9 @@ With higher support I did not get many rules.
 Plus, I thought if someone buys something after putting another thing in the shopping cart with probability of 0.4, it's pretty meaningful.
 The table below shows the rules with lift higher than 4 out of all the rules with the parameters I specified.
 
-```{r groceries-kable}
+```{r groceries-kable, results='hide'}
 ## Choose a subset
-kable(inspect(subset(groceryrules, lift > 4)))
+kable(inspect(subset(groceryrules, lift > 4))%>%as.data.frame)
 ```
 
 It's interesting to see that if a person buys `liquor`, that person is likely to buy `bottled beer` as well, which makes a lot of sense. 
@@ -358,7 +358,7 @@ combination in a shopping cart.
 
 I then plotted top 70 rules by lift. 
 
-```{r groceries-3}
+```{r groceries-3, results='hide'}
 # graph-based visualization
 plot(head(groceryrules, 70, by='lift'), method="graph", control=list(type="itemsets"))
 ```
@@ -368,7 +368,7 @@ We can see the highest lift rule of `liquor` &rarr; `bottled beer`.
 
 The graph below shows top 30 rules by lift.
 
-```{r groceries-4}
+```{r groceries-4, results='hide'}
 plot(head(groceryrules, 30, by='lift'),method="graph")
 ```
 
