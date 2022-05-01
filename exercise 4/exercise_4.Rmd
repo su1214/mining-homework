@@ -17,6 +17,7 @@ library(arules)
 library(arulesViz)
 library(factoextra)
 library(ggpubr)
+library(igraph)
 ```
 
 ## Clustering and PCA
@@ -269,34 +270,42 @@ names(socialClusterTable) = c("Category", "Cluster1", "Cluster2", "Cluster3")
 socialClusterTable %>% mutate(Cluster1= round(Cluster1/sum(Cluster1)*100,2)) %>% top_n(n=10, Cluster1) %>% ggplot() +
   geom_col(aes(x=reorder(Category,-Cluster1), y=Cluster1 ), fill = "#2E9FDF") +
   labs(y = "Percentage", x="Tweet Categories", 
-       title = "Top 10 categories within Cluster 1 by the proportion of tweets")
+       title = "Top 10 categories within Cluster 1 by the proportion of tweets") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 socialClusterTable %>% mutate(Cluster2= round(Cluster2/sum(Cluster2)*100,2)) %>% top_n(n=10, Cluster2) %>% ggplot() + 
   geom_col(aes(x=reorder(Category,-Cluster2), y=Cluster2 ), fill = "#00AFBB") +
   labs(y = "Percentage", x="Tweet Categories", 
-       title = "Top 10 categories within Cluster 2 by the proportion of tweets")
+       title = "Top 10 categories within Cluster 2 by the proportion of tweets") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 socialClusterTable %>% mutate(Cluster2= round(Cluster2/sum(Cluster2)*100,2)) %>% top_n(n=10, Cluster3) %>% ggplot() + 
   geom_col(aes(x=reorder(Category,-Cluster3), y=Cluster3 ), fill = "#C8E1AB") +
   labs(y = "Percentage", x="Tweet Categories", 
-       title = "Top 10 categories within Cluster 3 by the proportion of tweets")
+       title = "Top 10 categories within Cluster 3 by the proportion of tweets") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
 Each clusters give us interesting results,
 
-* `Cluster1` - All the top 10 categories shown in the graph share similar percentage of the number of tweets between 4-6%. This category is representative of majority of the population. 
-* `Cluster2` - `photo_sharing`, `cooking`, `shopping`, and `college_uni`, the top 4 categories form a market category.
-I think this is representative of the young and college students.
-* `Cluster3` - `health_nutrition`, `personal_fitness` and `cooking` forms separate market segement. This is a separate `health` market segment. 
+* `Cluster1` - All the top 10 categories shown in the graph share similar percentage of the number of tweets between 4-6%. This category looks like representative of topics related to or covered in traditional mass media.
+* `Cluster2` - `photo_sharing`, `cooking`, `shopping`, and `college_uni` are the top 4 categories from this market category.
+I think this is representative of the young adults and college students because people generally associate those activities with the young adults.
+* `Cluster3` - `health_nutrition`, `personal_fitness` and `cooking` form separate market segment. This looks like a separate market segment where `health` is important.
 
-We also see a lot of overlaps in the tweet categories between the different clusters which is expected but `k-means` manages to extract some useful information about the `market categories` of people using the `NutrientH20` product. Based on this we suggest that they target `college_students`, `younger audience` and people into `personal_fitness` and `healthy living`.
+We also see a lot of overlaps in the tweet categories between the different clusters which is expected but `k-means` manages to extract some useful information about the "market categories" of people using the `NutrientH20` product. Based on this we suggest that they target three distinct groups of **General Public / Traditional Mass Media / Current Politics and News**, **Young Adults / **, and **Personal Fitness / Healthy Lifestyles**.
 
 ## Association rules for grocery purchase
 
-```{r groceries, results = 'hide'}
+```{r groceries-1, results='hide'}
 groceries_raw = readLines('groceries.txt')
 groceries = as.list(strsplit(groceries_raw, ","))
 groceries = lapply(groceries, unique)
+
+#average number of items in groceries is 4.41
+matrix(data= c(lengths(groceries)),
+           ncol = 1,
+           byrow = TRUE) %>% mean
 
 ## Cast this resulting list of playlists as a special arules "transactions" class.
 grocerytrans = as(groceries, "transactions")
@@ -305,17 +314,28 @@ grocerytrans = as(groceries, "transactions")
 # Now run the 'apriori' algorithm
 # Look at rules with support > .01 & confidence >.1 & length (# artists) <= 5
 groceryrules = apriori(grocerytrans, 
-	parameter=list(support=.002, confidence=.5, maxlen=10))
+	parameter=list(support=.002, confidence=.4, maxlen=4))
                          
 # Look at the output... so many rules!
-inspect(groceryrules)
-summary(groceryrules)
+# inspect(groceryrules)
+# summary(groceryrules)
+```
 
+As the average number of items in groceries list is 4.41, I chose the `maxlen` to be 4. 
+Also, since there are so many items, I chose a low support of .002 as the threshold, with confidence equal to .4. 
+With higher support I did not get many rules. 
+Plus, I thought if someone buys something after putting another thing in the shopping cart with probability of 0.4, it's pretty meaningful.
+The table below shows the rules with lift higher than 4 out of all the rules with the parameters I specified.
+
+```{r groceries-kable}
 ## Choose a subset
-inspect(subset(groceryrules, lift > 2 & confidence > 0.35))
+kable(inspect(subset(groceryrules, lift > 4)))
+```
 
-### started from values near the max, and lowered to have around 5.
+It's interesting to see that if a person buys `liquor`, that person is likely to buy `bottled beer` as well, which makes a lot of sense. 
+There are many rules with `root vegetables` on the right hand side.
 
+```{r groceries-2}
 # plot all the rules in (support, confidence) space
 # notice that high lift rules tend to have low support
 plot(groceryrules)
@@ -327,16 +347,29 @@ plot(groceryrules, measure = c("support", "lift"), shading = "confidence")
 plot(groceryrules, method='two-key plot')
 
 # can now look at subsets driven by the plot
-inspect(subset(groceryrules, support > 0.04))
-inspect(subset(groceryrules, confidence > 0.4))
-
-# graph-based visualization
-sub1 = subset(groceryrules, subset=confidence > 0.5 & support > 0.002)
-inspect(sub1)
-summary(sub1)
-
-plot(head(sub1, 100, by='lift'), method='graph')
-saveAsGraph(sub1, file = "groceryrules.graphml")
+#inspect(subset(groceryrules, support > 0.04))
+#inspect(subset(groceryrules, confidence > 0.4))
 ```
 
-Chose the confidence and the support cutoff levels so that the subset have around 25 rows.
+From these three graphs, we can see that the majority of rules have support less than 0.01. 
+Another interesting fact is that a lot of rules have the order of three or four. 
+They tend to have lower support as well, which is probably because it's not likely to have that specific 
+combination in a shopping cart.
+
+I then plotted top 70 rules by lift. 
+
+```{r groceries-3}
+# graph-based visualization
+plot(head(groceryrules, 70, by='lift'), method="graph", control=list(type="itemsets"))
+```
+
+We can see the highest lift rule of `liquor` &rarr; `bottled beer`. 
+`root vegetables` and `other vegetables` have very big circles.
+
+The graph below shows top 30 rules by lift.
+
+```{r groceries-4}
+plot(head(groceryrules, 30, by='lift'),method="graph")
+```
+
+
