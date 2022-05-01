@@ -39,10 +39,12 @@ PCAwine = prcomp(wine1, scale=TRUE, rank=3)
 #summary(PCAwine)
 #round(PCAwine$rotation[,1:3],3) 
 
-autoplot(PCAwine, data = wine, colour = 'color')
+autoplot(PCAwine, data = wine, colour = 'color') +
+  labs(title = "Graph of PC1 and PC2, by colors of wine")
 autoplot(PCAwine, data = wine, colour = 'quality', alpha = .9, 
          loadings = TRUE, loadings.colour = 'pink',
-         loadings.label = TRUE, loadings.label.size = 3)
+         loadings.label = TRUE, loadings.label.size = 3) +
+  labs(title = "Graph of PC1 and PC2, by qualit ratings of wine")
 ```
 
 From the first graph, we can see that red and white wines sort of form clusters. 
@@ -67,7 +69,9 @@ wine2 = scale(wine[,1:11])
 # Clusterwine = kmeans(wine2, 10, nstart=50)
 
 wineclustered = kmeans(wine2, 2, nstart=50)
-qplot(quality, color, data=wine, color=factor(wineclustered$cluster))
+qplot(quality, color, data=wine, color=factor(wineclustered$cluster)) +
+  labs(title = "Graph of clusters by each quality rating and color of wine",
+        color = "cluster")
 
 wineclustered$color = wine$color
 # fviz_cluster(wineclustered, data = wine2,
@@ -78,7 +82,9 @@ wineclustered$color = wine$color
 #              ) + geom_point(aes(shape = wineclustered$color), alpha = 0.5)
 
 wineclustered2 = kmeans(wine2, 4, nstart=50)
-qplot(quality, color, data=wine, color=factor(wineclustered2$cluster))
+qplot(quality, color, data=wine, color=factor(wineclustered2$cluster)) +
+  labs(title = "Graph of clusters by each quality rating and color of wine",
+        color = "cluster")
 
 # wineclustered2$quality = wine$quality %>% as.factor
 # fviz_cluster(wineclustered2, data = wine2,
@@ -122,7 +128,8 @@ ggscatter(
   shape = "color", size = 1.5,  legend = "right", ggtheme = theme_bw(),
   xlab = paste0("Dim 1 (", variance.percent[1], "% )" ),
   ylab = paste0("Dim 2 (", variance.percent[2], "% )" )
-)
+) +
+  labs(title = "Graph of clusters on PCA axes by color of wine")
 
 ```
 
@@ -145,7 +152,8 @@ ggscatter(
   shape = "quality", size = 1.5,  legend = "right", ggtheme = theme_bw(),
   xlab = paste0("Dim 1 (", variance.percent[1], "% )" ),
   ylab = paste0("Dim 2 (", variance.percent[2], "% )" )
-)
+) +
+  labs(title = "Graph of clusters on PCA axes by each quality rating")
 ```
 
 
@@ -224,7 +232,6 @@ groceries_raw = readLines('groceries.txt')
 groceries = as.list(strsplit(groceries_raw, ","))
 groceries = lapply(groceries, unique)
 
-
 ## Cast this resulting list of playlists as a special arules "transactions" class.
 grocerytrans = as(groceries, "transactions")
 #summary(grocerytrans)
@@ -232,11 +239,10 @@ grocerytrans = as(groceries, "transactions")
 # Now run the 'apriori' algorithm
 # Look at rules with support > .01 & confidence >.1 & length (# artists) <= 5
 groceryrules = apriori(grocerytrans, 
-	parameter=list(support=.001, confidence=.7, maxlen=10))
+	parameter=list(support=.002, confidence=.5, maxlen=10))
                          
 # Look at the output... so many rules!
-#inspect(groceryrules)
-
+inspect(groceryrules)
 summary(groceryrules)
 
 ## Choose a subset
@@ -259,8 +265,10 @@ inspect(subset(groceryrules, support > 0.04))
 inspect(subset(groceryrules, confidence > 0.4))
 
 # graph-based visualization
-sub1 = subset(groceryrules, subset=confidence > 0.01 & support > 0.005)
+sub1 = subset(groceryrules, subset=confidence > 0.5 & support > 0.002)
+inspect(sub1)
 summary(sub1)
+
 plot(head(sub1, 100, by='lift'), method='graph')
 saveAsGraph(sub1, file = "groceryrules.graphml")
 ```
