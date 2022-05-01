@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns
+         http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+<!-- Created by igraph -->
+  <key id="v_name" for="node" attr.name="name" attr.type="string"/>
+  <key id="v_label" for="node" attr.name="label" attr.type="string"/>
+  <key id="v_index" for="node" attr.name="index" attr.type="double"/>
+  <key id="v_type" for="node" attr.name="type" attr.type="double"/>
+  <key id="v_support" for="node" attr.name="support" attr.type="double"/>
+  <key id="v_confidence" for="node" attr.name="confidence" attr.type="double"/>
+  <key id="v_coverage" for="node" attr.name="coverage" attr.type="double"/>
+  <key id="v_lift" for="node" attr.name="lift" attr.type="double"/>
+  <key id="v_count" for="node" attr.name="count" attr.type="double"/>
+  <graph id="G" edgedefault="directed">
+    <node id="n0">
+      <data key="v_name">124</data>
+      <data key="v_label">root vegetables</data>
+      <data key="v_index">124</data>
+      <data key="v_type">1</data>
+      <data key="v_count">-2147483648</data>
+    </node>
+    <node id="n1">
+      <data key="v_name">158</data>
+      <data key="v_label">tropical fruit</data>
+      <data key="v_index">158</data>
+      <data key="v_type">1</data>
+      <data key="v_count">-2147483648</data>
+    </node>
+    <node id="n2">
+      <data key="v_name">167</data>
+      <data key="v_label">whole milk</data>
+      <data key="v_index">167</data>
+      <data key="v_type">1</data>
+      <data key="v_count">-2147483648</data>
+    </node>
+    <node id="n3">
+      <data key="v_name">168</data>
+      <data key="v_label">yogurt</data>
+      <data key="v_index">168</data>
+      <data key="v_type">1</data>
+      <data key="v_count">-2147483648</data>
+    </node>
+    <node id="n4">
+      <data key="v_name">assoc1</data>
+      <data key="v_label">NA</data>
+      <data key="v_index">1</data>
+      <data key="v_type">2</data>
+      <data key="v_support">0.00569395017793594</data>
+      <data key="v_confidence">0.7</data>
+      <data key="v_coverage">0.00813421453990849</data>
+      <data key="v_lift">2.73955431754875</data>
+      <data key="v_count">56</data>
+    </node>
+    <edge source="n0" target="n4">
+    </edge>
+    <edge source="n1" target="n4">
+    </edge>
+    <edge source="n3" target="n4">
+    </edge>
+    <edge source="n4" target="n2">
+    </edge>
+  </graph>
+</graphml>

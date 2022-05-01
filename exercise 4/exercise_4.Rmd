@@ -24,6 +24,7 @@ library(ggpubr)
 We first ran PCA on those 11 chemical properties.
 
 ```{r winedata}
+set.seed(389)
 #reading the data and initial treatment
 wine = read.csv("wine.csv")
 wine$color = wine$color %>% as.factor
@@ -44,8 +45,9 @@ autoplot(PCAwine, data = wine, colour = 'quality', alpha = .9,
          loadings.label = TRUE, loadings.label.size = 3)
 ```
 
-From the first graph, we can see that red and white wines have pretty different principal components. 
-That is, we can easily distinguish
+From the first graph, we can see that red and white wines sort of form clusters. 
+This suggests that even after applying PCA, clustering would be useful.
+The second graph says that the qualities are kind of all over places, not easy to find a pattern.
 
 ```{r wineclustering}
 wine2 = scale(wine[,1:11])
@@ -75,7 +77,7 @@ wineclustered$color = wine$color
 #              ggtheme = theme_bw()
 #              ) + geom_point(aes(shape = wineclustered$color), alpha = 0.5)
 
-wineclustered2 = kmeans(wine2, 7, nstart=50)
+wineclustered2 = kmeans(wine2, 4, nstart=50)
 qplot(quality, color, data=wine, color=factor(wineclustered2$cluster))
 
 # wineclustered2$quality = wine$quality %>% as.factor
@@ -85,6 +87,20 @@ qplot(quality, color, data=wine, color=factor(wineclustered2$cluster))
 #              ggtheme = theme_bw()
 #              )
 ```
+
+I first picked the model of 2 clusters to see if it would naturally form two clusters of red and white wines. 
+The first graph represents how the two clusters are formed with the color and quality, it looks like one cluster has red wine 
+and the other has white wine, across all qualities. 
+
+Next, I picked the model of 4 clusters, hoping to see four groups of wine, low/high qualities and red/wine. 
+The second graph represents the 4 clusters across different colors and qualities of wine. 
+I can't really find a set pattern for the groups I was hoping to find. 
+
+I then went ahead to graph the clusters on the PCA axes, having the shape denote the color/quality. 
+We can see how useful the clusters are to explain the colors but not so much for the qualities. 
+That is, almost all points belong to one color of wine in the first graph, whereas there are many points 
+that are in different clusters with the same quality.
+
 
 ```{r wineclustering-graph1}
 ## Using PCA to graph clusters
@@ -131,6 +147,8 @@ ggscatter(
   ylab = paste0("Dim 2 (", variance.percent[2], "% )" )
 )
 ```
+
+
 
 ## Market Segmentation
 
@@ -214,7 +232,7 @@ grocerytrans = as(groceries, "transactions")
 # Now run the 'apriori' algorithm
 # Look at rules with support > .01 & confidence >.1 & length (# artists) <= 5
 groceryrules = apriori(grocerytrans, 
-	parameter=list(support=.01, confidence=.1, maxlen=2))
+	parameter=list(support=.001, confidence=.7, maxlen=10))
                          
 # Look at the output... so many rules!
 #inspect(groceryrules)
@@ -244,6 +262,7 @@ inspect(subset(groceryrules, confidence > 0.4))
 sub1 = subset(groceryrules, subset=confidence > 0.01 & support > 0.005)
 summary(sub1)
 plot(head(sub1, 100, by='lift'), method='graph')
+saveAsGraph(sub1, file = "groceryrules.graphml")
 ```
 
 Chose the confidence and the support cutoff levels so that the subset have around 25 rows.
