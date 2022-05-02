@@ -380,10 +380,15 @@ I then plotted top 70 rules by lift.
 ```{r groceries-3, results='hide'}
 # graph-based visualization
 plot(head(groceryrules, 70, by='lift'), method="graph", control=list(type="itemsets"))
+saveAsGraph(head(groceryrules, 70, by='lift'), file = "groceryrules.graphml")
 ```
 
 We can see the highest lift rule of `liquor` &rarr; `bottled beer`. 
 `root vegetables` and `other vegetables` have very big circles.
+
+I exported the graph to make a better looking graph in Gephi.
+
+![](exercise_4_files/figure-markdown_github/screenshot_210953.png)
 
 The graph below shows top 30 rules by lift.
 

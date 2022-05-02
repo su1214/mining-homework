@@ -165,6 +165,10 @@ I then plotted top 70 rules by lift.
 We can see the highest lift rule of `liquor` → `bottled beer`.
 `root vegetables` and `other vegetables` have very big circles.
 
+I exported the graph to make a better looking graph in Gephi.
+
+![](exercise_4_files/figure-markdown_github/screenshot_210953.png)
+
 The graph below shows top 30 rules by lift.
 
 ![](exercise_4_files/figure-markdown_github/groceries-4-1.png)
