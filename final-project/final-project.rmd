@@ -3,8 +3,8 @@ title: "ECO395M Final Project"
 author: "Steven Kim and Shreekara Shastry"
 date: ""
 output:
-  md_document:
-    variant: markdown_github
+  pdf_document:
+    latex_engine: xelatex
 ---
 
 ```{r setup, include=FALSE}
