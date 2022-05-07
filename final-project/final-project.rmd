@@ -1,0 +1,54 @@
+---
+title: "ECO 395 Final Project"
+output: md_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(mosaic)
+library(ggplot2)
+library(airportr)
+```
+
+```{r}
+airport = read.csv("jantojun2020.csv")
+```
+
+Let's look at the airlines in specific. In specific which airline has carried the most 
+number of flights.
+
+Airline Carrier Code: 
+AA: American Airlines 
+AS: Alaska Airlines 
+B6: JetBlue 
+DL: Delta Air Lines 
+F9: Frontier Airlines 
+G4: Allegiant Air 
+HA: Hawaiian Airlines 
+NK: Spirit Airlines 
+UA: United Airlines 
+WN: Southwest Airlines
+
+```{r}
+airport_sum = airport %>% group_by(MKT_UNIQUE_CARRIER) %>% summarise(total = n())
+
+ggplot(airport_sum) +
+  geom_col(aes(x=MKT_UNIQUE_CARRIER, y=total))
+```
+
+Let's analyse which airport has the most delays
+```{r}
+airport_del = na.omit(airport) %>% group_by(DEST) %>% summarise(arr_delay = mean(ARR_DELAY)) %>% arrange(desc(arr_delay))
+
+ggplot(head(airport_del)) +
+  geom_col(aes(x=DEST, y=arr_delay))
+```
+
+
+```{r}
+airport_lookup("PPG", input_type = "IATA", output_type = "name")
+airport_lookup("BRD", input_type = "IATA", output_type = "name")
+
+airport_del = airport_del %>% mutate(name = airport_lookup(DEST, input_type = "IATA", output_type = "name"))
+```
