@@ -7,3 +7,5 @@ goal - to see the delays and make a predictive model of a delay of a given fligh
 ## things to do
 
 get covid cases data
+
+https://data.cdc.gov/Case-Surveillance/United-States-COVID-19-Cases-and-Deaths-by-State-o/9mfq-cb36
