@@ -13,6 +13,8 @@ library(tidyverse)
 library(knitr)
 library(airportr)
 library(lubridate)
+library(rsample)
+library(randomForest)
 ```
 
 ```{r}
@@ -35,6 +37,7 @@ UA: United Airlines
 WN: Southwest Airlines
 
 ```{r}
+#total numbers of flights by each carrier
 airport_sum = airport %>% group_by(MKT_UNIQUE_CARRIER) %>% summarise(total = n())
 
 ggplot(airport_sum) +
@@ -43,15 +46,49 @@ ggplot(airport_sum) +
 
 Let's analyse which airport has the most delays
 ```{r}
-airport_del = na.omit(airport) %>% group_by(DEST) %>% summarise(arr_delay = mean(ARR_DELAY)) %>% arrange(desc(arr_delay))
-
-ggplot(head(airport_del)) +
-  geom_col(aes(x=DEST, y=arr_delay))
+#proportion of delayed flights by airlines
+airline_whether_delay = airport %>% group_by(MKT_UNIQUE_CARRIER) %>% summarise(delayed = mean(ARR_DEL15, na.rm=TRUE))
+ggplot(airline_whether_delay) +
+  geom_col(aes(x=MKT_UNIQUE_CARRIER, y=delayed))
 ```
 
 
 ```{r}
-airport_lookup("PPG", input_type = "IATA", output_type = "name")
+#average delay time of the delayed (more than 15 mins) flights by airlines
+airline_delay = airport %>% filter(ARR_DEL15 == 1) %>% group_by(MKT_UNIQUE_CARRIER) %>% summarise(delay = mean(ARR_DELAY_NEW)) %>% arrange(desc(delay))
+ggplot(airline_delay) +
+  geom_col(aes(x=MKT_UNIQUE_CARRIER, y=delay))
+```
+
+```{r}
+# top airports with most delays
+airport_whether_delay = airport %>% group_by(DEST) %>% summarise(delayed = mean(ARR_DEL15, na.rm=TRUE)) %>% arrange(desc(delayed))
+ggplot(head(airport_whether_delay)) +
+  geom_col(aes(x=DEST, y=delayed))
+```
+
+```{r}
+ggplot(tail(airport_whether_delay)) +
+  geom_col(aes(x=DEST, y=delayed))
+```
+
+```{r}
+#average delay time of the delayed (more than 15 mins) flights by airports
+airport_delay = airport %>% filter(ARR_DEL15 == 1) %>% group_by(DEST) %>% summarise(delay = mean(ARR_DELAY_NEW)) %>% arrange(desc(delay))
+ggplot(head(airport_delay)) +
+  geom_col(aes(x=DEST, y=delay))
+```
+
+```{r}
+ggplot(tail(airport_delay)) +
+  geom_col(aes(x=DEST, y=delay))
+```
+
+
+
+
+```{r}
+airport_lookup("OGD", input_type = "IATA", output_type = "name")
 airport_lookup("BRD", input_type = "IATA", output_type = "name")
 
 airport_del = airport_del %>% mutate(name = airport_lookup(DEST, input_type = "IATA", output_type = "name"))
@@ -70,5 +107,19 @@ airport$FL_DATE = airport$FL_DATE %>% as.Date(format = "%m/%d/%Y")
 airport_covid = left_join(airport, covid_2020, by=c("FL_DATE" = "date", "ORIGIN_STATE_NM" = "state"))
 airport_covid = airport_covid %>% mutate(cases_avg_per_100k = replace_na(cases_avg_per_100k, 0))
 ```
+
+
+```{r}
+airport_covid_split = initial_split(airport_covid, 0.8)
+airport_covid_train = training(airport_covid_split)
+airport_covid_test = testing(airport_covid_split)
+randomFModel = randomForest(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE,data=airport_covid_train, na.action=na.omit)
+
+lm1 = lm(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE,data=airport_covid_train, na.action=na.omit)
+```
+
+
+
+
 
 
