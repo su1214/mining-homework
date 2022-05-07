@@ -13,6 +13,10 @@ library(tidyverse)
 library(knitr)
 library(airportr)
 library(lubridate)
+library(randomForest)
+library(rsample)
+library(parallel)
+library(MASS)
 ```
 
 ```{r}
@@ -61,7 +65,7 @@ airport_del = airport_del %>% mutate(name = airport_lookup(DEST, input_type = "I
 ```{r}
 covid_2020 = read.csv("Data/us-states.csv") %>% mutate(year = substring(date,1,4)) %>% filter(year == 2020)
 covid_2020 = covid_2020[order(as.Date(covid_2020$date, format="%Y/%m/%d")),]
-covid_2020 = covid_2020 %>% select(date, state, cases_avg_per_100k)
+covid_2020 = covid_2020 %>% dplyr::select(date, state, cases_avg_per_100k)
 covid_2020$date = as.Date(covid_2020$date)
 
 # changing the date format and the name of the origin state
@@ -69,6 +73,21 @@ airport$FL_DATE = airport$FL_DATE %>% as.Date(format = "%m/%d/%Y")
 
 airport_covid = left_join(airport, covid_2020, by=c("FL_DATE" = "date", "ORIGIN_STATE_NM" = "state"))
 airport_covid = airport_covid %>% mutate(cases_avg_per_100k = replace_na(cases_avg_per_100k, 0))
+```
+
+Random Variables
+```{r}
+airport_covid_split = initial_split(airport_covid, 0.8)
+airport_covid_train = training(airport_covid_split)
+airport_covid_test = testing(airport_covid_split)
+
+# starts = rep(100,40)
+# fx = function() randomForest(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE,data=airport_covid_train, na.action=na.omit)
+# 
+# numCores = detectCores()
+# results = mclapply(starts, fx, mc.cores = numCores)
+rm(airport, covid_2020)
+forest1 = randomForest(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE,data=airport_covid_train, na.action=na.omit)
 ```
 
 
