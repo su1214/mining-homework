@@ -16,7 +16,7 @@ library(airportr)
 ```
 
 ```{r}
-airport = read.csv("jantojun2020.csv")
+airport = read.csv("Data/jantojun2020.csv")
 ```
 
 Let's look at the airlines in specific. In specific which airline has carried the most 
