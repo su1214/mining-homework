@@ -1,6 +1,10 @@
 ---
-title: "ECO 395 Final Project"
-output: md_document
+title: "ECO395M Final Project"
+author: "Steven Kim and Shreekara Shastry"
+date: ""
+output:
+  md_document:
+    variant: markdown_github
 ---
 
 ```{r setup, include=FALSE}
