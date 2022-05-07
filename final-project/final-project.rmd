@@ -58,7 +58,9 @@ airport_del = airport_del %>% mutate(name = airport_lookup(DEST, input_type = "I
 
 
 ```{r}
-
+covid_2020 = read.csv("Data/us-states.csv") %>% mutate(year = substring(date,1,4)) %>% filter(year == 2020)
+covid_2020 = covid_2020[order(as.Date(covid_2020$date, format="%Y/%m/%d")),]
+covid_2020 = covid_2020 %>% select(date, state, cases_avg_per_100k)
 ```
 
 
