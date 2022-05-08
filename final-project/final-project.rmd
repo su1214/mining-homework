@@ -17,6 +17,8 @@ library(randomForest)
 library(rsample)
 library(parallel)
 library(MASS)
+library(pscl)
+library(caret)
 ```
 
 ```{r}
@@ -93,7 +95,7 @@ ggplot(tail(airport_delay)) +
 airport_lookup("OGD", input_type = "IATA", output_type = "name")
 airport_lookup("BRD", input_type = "IATA", output_type = "name")
 
-airport_del = airport_del %>% mutate(name = airport_lookup(DEST, input_type = "IATA", output_type = "name"))
+#airport_del = airport_del %>% mutate(name = airport_lookup(DEST, input_type = "IATA", output_type = "name"))
 ```
 
 
@@ -108,31 +110,43 @@ airport$FL_DATE = airport$FL_DATE %>% as.Date(format = "%m/%d/%Y")
 
 airport_covid = left_join(airport, covid_2020, by=c("FL_DATE" = "date", "ORIGIN_STATE_NM" = "state"))
 airport_covid = airport_covid %>% mutate(cases_avg_per_100k = replace_na(cases_avg_per_100k, 0))
+cols = c("MONTH","DAY_OF_MONTH","DAY_OF_WEEK","FL_DATE", "MKT_UNIQUE_CARRIER", "MKT_CARRIER_FL_NUM","TAIL_NUM", "ORIGIN", "ORIGIN_STATE_NM", "DEST", "DEST_STATE_NM", "CRS_DEP_TIME", "CRS_ARR_TIME", "ARR_DELAY_NEW","ARR_DEL15", "CANCELLED", "CANCELLATION_CODE", "CRS_ELAPSED_TIME", "DISTANCE", "cases_avg_per_100k")
+airport_covid = airport_covid[,cols]
+cols1 = c("MONTH","DAY_OF_MONTH","DAY_OF_WEEK","MKT_UNIQUE_CARRIER", "TAIL_NUM", "ORIGIN", "ORIGIN_STATE_NM", "DEST", "DEST_STATE_NM","ARR_DEL15", "CANCELLED", "CANCELLATION_CODE")
+airport_covid[cols1] <- lapply(airport_covid[cols1], as.factor)
+airport_covid
 ```
 
 Random Variables
-```{r}
-airport_covid_split = initial_split(airport_covid, 0.8)
+
+```{r California}
+#supervied models for California
+airport_covid_California = airport_covid %>% filter(ORIGIN_STATE_NM == "California")
+airport_covid_California$ORIGIN = droplevels(airport_covid_California$ORIGIN)
+airport_covid_split = initial_split(airport_covid_California, 0.8)
 airport_covid_train = training(airport_covid_split)
 airport_covid_test = testing(airport_covid_split)
-
-# starts = rep(100,40)
-# fx = function() randomForest(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE,data=airport_covid_train, na.action=na.omit)
-# 
-# numCores = detectCores()
-# results = mclapply(starts, fx, mc.cores = numCores)
-rm(airport, covid_2020)
-forest1 = randomForest(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE,data=airport_covid_train, na.action=na.omit)
+rfCalifornia = randomForest(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + DISTANCE + cases_avg_per_100k, data=airport_covid_train, na.action=na.omit, ntree = 50, mtry = 6, importance = TRUE)
 ```
 
+```{r}
+k_grid = seq(5,100,by=10)
+cv_grid = foreach(k = k_grid, .combine='rbind') %dopar% {
+  models = map(airport_covid_train, ~ knnreg(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE + cases_avg_per_100kk, k=k, data = ., use.all=FALSE))
+  errs = map2_dbl(models, airport_covid_test, modelr::rmse)
+  c(k=k, err = mean(errs), std_err = sd(errs)/sqrt(K_folds))
+} %>% as.data.frame
+
+cv_grid_final = cv_grid %>% filter(err == min(cv_grid$err))
+rownames(cv_grid_final) = c("KNN Model")
+cv_grid_final = rbind(cv_grid_final, data.frame(k="NA", err = mean(errs), std_err = sd(errs)/sqrt(K_folds),  row.names = c("Linear Model"))) %>% dplyr::select(-std_err)
+colnames(cv_grid_final) = c("k", "rMSE")
+```
 
 ```{r}
-airport_covid_split = initial_split(airport_covid, 0.8)
-airport_covid_train = training(airport_covid_split)
-airport_covid_test = testing(airport_covid_split)
-randomFModel = randomForest(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE,data=airport_covid_train, na.action=na.omit)
-
-lm1 = lm(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE,data=airport_covid_train, na.action=na.omit)
+#zero inflatied poisson regression for California
+zipCalifornia <- zeroinfl(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE + cases_avg_per_100k | cases_avg_per_100k, data = airport_covid_train)
+summary(zipCalifornia)
 ```
 
 
