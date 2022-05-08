@@ -18,16 +18,13 @@ library(rsample)
 library(parallel)
 library(MASS)
 library(pscl)
-library(caret)
-library(parallel)
-library(foreach)
 library(purrr)
 library(modelr)
 library(pROC)
 library(rpart)
 library(rpart.plot)
-library(pdp)
 library(vip)
+library(gridExtra)
 ```
 
 ```{=latex}
@@ -39,6 +36,12 @@ This is our abstract.
 \thispagestyle{empty}
 \end{titlepage}
 \section{Introduction}
+```
+
+COVID-19 has affected our society in various ways. Amongst all of them, we decided to look at its effect on the 
+flight delay and cancellations. 
+
+```{=latex}
 \section{Methods}
 \subsection{Dataset}
 ```
@@ -50,75 +53,21 @@ We have used 2 separate datasets and combined them to form a data frame that we 
 ```
 
 Data cleaning and preprocessing for the dataset was a four-step process.
-	1.	Formatting the date field in both the individual datasets to match before performing a left join.
-	2.	Merging the covid case dataset into the flight data based on date and state.
-	3.	Factorizing the categorical variables from this combined dataset.  `MONTH`, `DAY_OF_MONTH`, `DAY_OF_WEEK`, `MKT_UNIQUE_CARRIER`, `TAIL_NUM`, `ORIGIN`, `ORIGIN_STATE_NM, `DEST`, `DEST_STATE_NM`, `ARR_DEL15`, `CANCELLED`, `CANCELLATION_CODE`, these are the categorical variables in the dataset.
-	4.	Removing the variables that are not used in the analysis to have a cleaner dataset. 
+1. Formatting the date field in both the individual datasets to match before performing a left join.
+2. Merging the covid case dataset into the flight data based on date and state.
+3. Factorizing the categorical variables from this combined dataset.  `MONTH`, `DAY_OF_MONTH`, `DAY_OF_WEEK`, `MKT_UNIQUE_CARRIER`, `TAIL_NUM`, `ORIGIN`, `ORIGIN_STATE_NM`, `DEST`, `DEST_STATE_NM`, `ARR_DEL15`, `CANCELLED`, `CANCELLATION_CODE`, these are the categorical variables in the dataset.
+4. Removing the variables that are not used in the analysis to have a cleaner dataset.
 
 ```{r read-data}
 airport = read.csv("Data/jantojun2020.csv")
 ```
 
-Let's look at the airlines in specific. In specific which airline has carried the most number of flights.
-
 Airline Carrier Code: AA: American Airlines AS: Alaska Airlines B6: JetBlue DL: Delta Air Lines F9: Frontier Airlines G4: Allegiant Air HA: Hawaiian Airlines NK: Spirit Airlines UA: United Airlines WN: Southwest Airlines
-
-```{r marketshare}
-#total numbers of flights by each carrier
-airport_sum = airport %>% group_by(MKT_UNIQUE_CARRIER) %>% summarise(total = n())
-
-ggplot(airport_sum) +
-  geom_col(aes(x=MKT_UNIQUE_CARRIER, y=total))
-```
-
-Let's analyse which airport has the most delays
-
-```{r delay_by_airlines, eval=FALSE}
-#proportion of delayed flights by airlines
-airline_whether_delay = airport %>% group_by(MKT_UNIQUE_CARRIER) %>% summarise(delayed = mean(ARR_DEL15, na.rm=TRUE))
-ggplot(airline_whether_delay) +
-  geom_col(aes(x=MKT_UNIQUE_CARRIER, y=delayed))
-```
-
-```{r delay_times_by_airlines, eval=FALSE}
-#average delay time of the delayed (more than 15 mins) flights by airlines
-airline_delay = airport %>% filter(ARR_DEL15 == 1) %>% group_by(MKT_UNIQUE_CARRIER) %>% summarise(delay = mean(ARR_DELAY_NEW)) %>% arrange(desc(delay))
-ggplot(airline_delay) +
-  geom_col(aes(x=MKT_UNIQUE_CARRIER, y=delay))
-```
-
-```{r delay_by_airport1, eval=FALSE}
-# top airports with most delays
-airport_whether_delay = airport %>% group_by(DEST) %>% summarise(delayed = mean(ARR_DEL15, na.rm=TRUE)) %>% arrange(desc(delayed))
-ggplot(head(airport_whether_delay)) +
-  geom_col(aes(x=DEST, y=delayed))
-```
-
-```{r delay_by_airport2, eval=FALSE}
-# top airports with least delays
-ggplot(tail(airport_whether_delay)) +
-  geom_col(aes(x=DEST, y=delayed))
-```
-
-```{r delay_times_by_airport1, eval=FALSE}
-#average delay time of the delayed (more than 15 mins) flights by airports, top 6
-airport_delay = airport %>% filter(ARR_DEL15 == 1) %>% group_by(DEST) %>% summarise(delay = mean(ARR_DELAY_NEW)) %>% arrange(desc(delay))
-ggplot(head(airport_delay)) +
-  geom_col(aes(x=DEST, y=delay))
-```
-
-```{r delay_times_by_airport2, eval=TRUE}
-#average delay time of the delayed (more than 15 mins) flights by airports, bottom 6
-ggplot(tail(airport_delay)) +
-  geom_col(aes(x=DEST, y=delay))
-```
-
 
 ```{r, eval=FALSE}
 airport_lookup("OGD", input_type = "IATA", output_type = "name")
 airport_lookup("BRD", input_type = "IATA", output_type = "name")
 ```
-
 
 ```{r data-cleaning}
 covid_2020 = read.csv("Data/us-states.csv") %>% mutate(year = substring(date,1,4)) %>% filter(year == 2020)
@@ -141,8 +90,6 @@ cols1 = c("MONTH","DAY_OF_MONTH","DAY_OF_WEEK","MKT_UNIQUE_CARRIER", "TAIL_NUM",
 airport_covid[cols1] <- lapply(airport_covid[cols1], as.factor)
 ```
 
-focusing on california
-
 ```{r train-test-split}
 #train/test split for California
 airport_covid_California = airport_covid %>% filter(ORIGIN_STATE_NM == "California")
@@ -159,32 +106,12 @@ airport_covid_Texas_train = training(airport_covid_Texas_split)
 airport_covid_Texas_test = testing(airport_covid_Texas_split)
 ```
 
-```{r, eval=FALSE}
-#abandoned random forest model - too many zeros in the dependent variable
-rfCalifornia = randomForest(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + DISTANCE + cases_avg_per_100k, data=airport_covid_train, na.action=na.omit, ntree = 50, mtry = 6, importance = TRUE)
-```
-
-```{r, eval = FALSE}
-#abandoned knn model - too many zeros in the dependent variable
-k_grid = seq(5,20,by=5)
-cv_grid = foreach(k = k_grid, .combine='rbind') %do% {
-  knn = knnreg(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE + cases_avg_per_100k, airport_covid_train, k=k)
-  rms = rmse(knn, airport_covid_test)
-  c(k=k, err=rms)
-} %>% as.data.frame
-
-ggplot(cv_grid) + 
-  geom_point(aes(x=k, y=err)) + 
-  labs(y = 'RMSE') +
-  scale_x_log10() +
-  labs(title = "RMSE Plot for KNN Models")
-
-cv_grid_final = cv_grid %>% filter(err == min(cv_grid$err))
-rownames(cv_grid_final) = c("KNN Model")
-colnames(cv_grid_final) = c("k", "rMSE")
-
-knnCalifornia = knnreg(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE + cases_avg_per_100k, airport_covid_train, k=5)
-rmse(knnCalifornia, data=airport_covid_test)
+```{r, scatterplot}
+scatterCalifornia = ggplot(airport_covid_California) +
+  geom_point(aes(x=cases_avg_per_100k, y=ARR_DELAY_NEW))
+scatterTexas = ggplot(airport_covid_Texas) +
+  geom_point(aes(x=cases_avg_per_100k, y=ARR_DELAY_NEW))
+grid.arrange(scatterCalifornia, scatterTexas, ncol=2)
 ```
 
 ```{r delayrate-logit}
@@ -201,11 +128,12 @@ kable(confusion_out)
 # out of sample accuracy for k=0.5
 sum(diag(confusion_out))/sum(confusion_out)
 
-rocobj <- plot.roc(airport_covid_California_test$CANCELLED, yhatCalifornia_del,
-                   main = "Confidence intervals", 
-                   percent=TRUE,
-                   ci = TRUE,                  # compute AUC (of AUC by default)
-                   print.auc = TRUE)           # print the AUC (will contain the CI)
+#ROC curve not used
+# rocobj <- plot.roc(airport_covid_California_test$CANCELLED, yhatCalifornia_del,
+#                    main = "Confidence intervals", 
+#                    percent=TRUE,
+#                    ci = TRUE,                  # compute AUC (of AUC by default)
+#                    print.auc = TRUE)           # print the AUC (will contain the CI)
 
 ## Texas
 logitTexas_del = glm(ARR_DEL15 ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST_STATE_NM + DISTANCE + cases_avg_per_100k, data= airport_covid_Texas_train, na.action = na.omit, family="binomial")
@@ -218,11 +146,12 @@ kable(confusion_out)
 # out of sample accuracy for k=0.5
 sum(diag(confusion_out))/sum(confusion_out)
 
-rocobj <- plot.roc(airport_covid_Texas_test$CANCELLED, yhatTexas_del,
-                   main = "Confidence intervals", 
-                   percent=TRUE,
-                   ci = TRUE,                  # compute AUC (of AUC by default)
-                   print.auc = TRUE)           # print the AUC (will contain the CI)
+# ROC Curve not used
+# rocobj <- plot.roc(airport_covid_Texas_test$CANCELLED, yhatTexas_del,
+#                    main = "Confidence intervals", 
+#                    percent=TRUE,
+#                    ci = TRUE,                  # compute AUC (of AUC by default)
+#                    print.auc = TRUE)           # print the AUC (will contain the CI)
 ```
 
 ```{r cancellationrate-logit}
@@ -239,11 +168,12 @@ kable(confusion_out)
 # out of sample accuracy for k=0.5
 sum(diag(confusion_out))/sum(confusion_out)
 
-rocobj <- plot.roc(airport_covid_California_test$CANCELLED, yhatCalifornia,
-                   main = "Confidence intervals", 
-                   percent=TRUE,
-                   ci = TRUE,                  # compute AUC (of AUC by default)
-                   print.auc = TRUE)           # print the AUC (will contain the CI)
+# ROC Curve not used
+# rocobj <- plot.roc(airport_covid_California_test$CANCELLED, yhatCalifornia,
+#                    main = "Confidence intervals", 
+#                    percent=TRUE,
+#                    ci = TRUE,                  # compute AUC (of AUC by default)
+#                    print.auc = TRUE)           # print the AUC (will contain the CI)
 
 #Texas
 logitTexas = glm(CANCELLED ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST_STATE_NM  + DISTANCE + cases_avg_per_100k, data= airport_covid_Texas_train, na.action = na.omit, family="binomial")
@@ -256,11 +186,12 @@ kable(confusion_out)
 # out of sample accuracy for k=0.5
 sum(diag(confusion_out))/sum(confusion_out)
 
-rocobj <- plot.roc(airport_covid_Texas_test$CANCELLED, yhatTexas,
-                   main = "Confidence intervals", 
-                   percent=TRUE,
-                   ci = TRUE,                  # compute AUC (of AUC by default)
-                   print.auc = TRUE)           # print the AUC (will contain the CI)
+# ROC Curve not used
+# rocobj <- plot.roc(airport_covid_Texas_test$CANCELLED, yhatTexas,
+#                    main = "Confidence intervals", 
+#                    percent=TRUE,
+#                    ci = TRUE,                  # compute AUC (of AUC by default)
+#                    print.auc = TRUE)           # print the AUC (will contain the CI)
 ```
 
 ```{r cancellation-tree}
