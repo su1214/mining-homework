@@ -19,6 +19,13 @@ library(parallel)
 library(MASS)
 library(pscl)
 library(caret)
+library(parallel)
+library(foreach)
+library(purrr)
+library(modelr)
+library(pROC)
+library(rpart)
+library(rpart.plot)
 ```
 
 ```{r}
@@ -130,16 +137,15 @@ rfCalifornia = randomForest(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CAR
 ```
 
 ```{r}
-k_grid = seq(5,100,by=10)
-cv_grid = foreach(k = k_grid, .combine='rbind') %dopar% {
-  models = map(airport_covid_train, ~ knnreg(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE + cases_avg_per_100kk, k=k, data = ., use.all=FALSE))
-  errs = map2_dbl(models, airport_covid_test, modelr::rmse)
-  c(k=k, err = mean(errs), std_err = sd(errs)/sqrt(K_folds))
+k_grid = seq(5,45,by=10)
+cv_grid = foreach(k = k_grid, .combine='rbind') %do% {
+  knn = knnreg(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE + cases_avg_per_100k, airport_covid_train, k=k)
+  rms = rmse(knn, airport_covid_test)
+  c(k=k, err=rms)
 } %>% as.data.frame
 
 cv_grid_final = cv_grid %>% filter(err == min(cv_grid$err))
 rownames(cv_grid_final) = c("KNN Model")
-cv_grid_final = rbind(cv_grid_final, data.frame(k="NA", err = mean(errs), std_err = sd(errs)/sqrt(K_folds),  row.names = c("Linear Model"))) %>% dplyr::select(-std_err)
 colnames(cv_grid_final) = c("k", "rMSE")
 ```
 
@@ -147,6 +153,40 @@ colnames(cv_grid_final) = c("k", "rMSE")
 #zero inflatied poisson regression for California
 zipCalifornia <- zeroinfl(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE + cases_avg_per_100k | cases_avg_per_100k, data = airport_covid_train)
 summary(zipCalifornia)
+```
+
+```{r}
+# seeing the effect of covid on cancellations
+logitCalifornia = glm(CANCELLED ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE + cases_avg_per_100k, data= airport_covid_train, na.action = na.omit, family="binomial")
+
+logitCalifornia_pred = predict(logitCalifornia, airport_covid_test, type="response")  # predicted probabilities
+yhatCalifornia = ifelse(logitCalifornia_pred > 0.5, 1, 0)
+confusion_out = table(y = airport_covid_test$CANCELLED, yhat = yhatCalifornia)
+kable(confusion_out)
+
+# out of sample accuracy for k=0.5
+sum(diag(confusion_out))/sum(confusion_out)
+
+rocobj <- plot.roc(airport_covid_test$CANCELLED, yhatCalifornia,
+                   main = "Confidence intervals", 
+                   percent=TRUE,
+                   ci = TRUE,                  # compute AUC (of AUC by default)
+                   print.auc = TRUE)           # print the AUC (will contain the CI)
+```
+```{r}
+california.tree = rpart(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE + cases_avg_per_100k, data=airport_covid_train, control = rpart.control(cp = 0.002, minsplit=30))
+
+prune_1se = function(my_tree) {
+  out = as.data.frame(my_tree$cptable)
+  thresh = min(out$xerror + out$xstd)
+  cp_opt = max(out$CP[out$xerror <= thresh])
+  prune(my_tree, cp=cp_opt)
+}
+
+california.prune = prune_1se(california.tree)
+
+# RMSE value for out of sample
+modelr::rmse(california.prune, airport_covid_test)
 ```
 
 
