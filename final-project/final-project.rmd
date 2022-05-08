@@ -1,5 +1,5 @@
 ---
-title: "ECO395M Final Project"
+title: "ECO395M Final Project: Impact of Covid-19 on the flight delays and cancellation in California and Texas"
 author: "Steven Kim and Shreekara Shastry"
 date: ""
 output:
@@ -26,12 +26,36 @@ library(modelr)
 library(pROC)
 library(rpart)
 library(rpart.plot)
+library(pdp)
+library(vip)
 ```
-# Impact of Covid-19 on the flight delays and cancellation in California and Texas
 
-## Abstract
+```{=latex}
+\begin{titlepage}
+\maketitle
+\begin{abstract}
+This is our abstract.
+\end{abstract}
+\thispagestyle{empty}
+\end{titlepage}
+\section{Introduction}
+\section{Methods}
+\subsection{Dataset}
+```
 
-```{r}
+We have used 2 separate datasets and combined them to form a data frame that we used in the further analysis. The first dataset is from The United States Department of Transportation's (DOT) Bureau of Transportation Statistics tracks the on-time performance of domestic flights operated by large air carriers. The data collected is from January to June 2020 and contains relevant flight information (on-time, delayed, canceled, diverted flights) from the Top 10 United States flight carriers for 11 million flights. The second dataset is from the New York Times[2] which contains the state-wise data on the daily number of new cases and deaths, the seven-day rolling average, and the seven-day rolling average per 100,000 residents. We merged these two datasets based on the date and state to create a new dataset that we used in all the models. This combined dataset has in total of 2745847 observations with data from 375 different airports.
+
+```{=latex}
+\subsection{Data Wrangling}
+```
+
+Data cleaning and preprocessing for the dataset was a four-step process.
+	1.	Formatting the date field in both the individual datasets to match before performing a left join.
+	2.	Merging the covid case dataset into the flight data based on date and state.
+	3.	Factorizing the categorical variables from this combined dataset.  `MONTH`, `DAY_OF_MONTH`, `DAY_OF_WEEK`, `MKT_UNIQUE_CARRIER`, `TAIL_NUM`, `ORIGIN`, `ORIGIN_STATE_NM, `DEST`, `DEST_STATE_NM`, `ARR_DEL15`, `CANCELLED`, `CANCELLATION_CODE`, these are the categorical variables in the dataset.
+	4.	Removing the variables that are not used in the analysis to have a cleaner dataset. 
+
+```{r read-data}
 airport = read.csv("Data/jantojun2020.csv")
 ```
 
@@ -39,7 +63,7 @@ Let's look at the airlines in specific. In specific which airline has carried th
 
 Airline Carrier Code: AA: American Airlines AS: Alaska Airlines B6: JetBlue DL: Delta Air Lines F9: Frontier Airlines G4: Allegiant Air HA: Hawaiian Airlines NK: Spirit Airlines UA: United Airlines WN: Southwest Airlines
 
-```{r}
+```{r marketshare}
 #total numbers of flights by each carrier
 airport_sum = airport %>% group_by(MKT_UNIQUE_CARRIER) %>% summarise(total = n())
 
@@ -49,54 +73,54 @@ ggplot(airport_sum) +
 
 Let's analyse which airport has the most delays
 
-```{r}
+```{r delay_by_airlines}
 #proportion of delayed flights by airlines
 airline_whether_delay = airport %>% group_by(MKT_UNIQUE_CARRIER) %>% summarise(delayed = mean(ARR_DEL15, na.rm=TRUE))
 ggplot(airline_whether_delay) +
   geom_col(aes(x=MKT_UNIQUE_CARRIER, y=delayed))
 ```
 
-```{r}
+```{r delay_times_by_airlines}
 #average delay time of the delayed (more than 15 mins) flights by airlines
 airline_delay = airport %>% filter(ARR_DEL15 == 1) %>% group_by(MKT_UNIQUE_CARRIER) %>% summarise(delay = mean(ARR_DELAY_NEW)) %>% arrange(desc(delay))
 ggplot(airline_delay) +
   geom_col(aes(x=MKT_UNIQUE_CARRIER, y=delay))
 ```
 
-```{r}
+```{r delay_by_airport1}
 # top airports with most delays
 airport_whether_delay = airport %>% group_by(DEST) %>% summarise(delayed = mean(ARR_DEL15, na.rm=TRUE)) %>% arrange(desc(delayed))
 ggplot(head(airport_whether_delay)) +
   geom_col(aes(x=DEST, y=delayed))
 ```
 
-```{r}
+```{r delay_by_airport2}
+# top airports with least delays
 ggplot(tail(airport_whether_delay)) +
   geom_col(aes(x=DEST, y=delayed))
 ```
 
-```{r}
-#average delay time of the delayed (more than 15 mins) flights by airports
+```{r delay_times_by_airport1}
+#average delay time of the delayed (more than 15 mins) flights by airports, top 6
 airport_delay = airport %>% filter(ARR_DEL15 == 1) %>% group_by(DEST) %>% summarise(delay = mean(ARR_DELAY_NEW)) %>% arrange(desc(delay))
 ggplot(head(airport_delay)) +
   geom_col(aes(x=DEST, y=delay))
 ```
 
-```{r}
+```{r delay_times_by_airport2}
+#average delay time of the delayed (more than 15 mins) flights by airports, bottom 6
 ggplot(tail(airport_delay)) +
   geom_col(aes(x=DEST, y=delay))
 ```
 
-```{r}
+
+```{r, eval=FALSE}
 airport_lookup("OGD", input_type = "IATA", output_type = "name")
 airport_lookup("BRD", input_type = "IATA", output_type = "name")
-
-#airport_del = airport_del %>% mutate(name = airport_lookup(DEST, input_type = "IATA", output_type = "name"))
 ```
 
 
-### Factorization
-```{r}
+```{r data-cleaning}
 covid_2020 = read.csv("Data/us-states.csv") %>% mutate(year = substring(date,1,4)) %>% filter(year == 2020)
 covid_2020 = covid_2020[order(as.Date(covid_2020$date, format="%Y/%m/%d")),]
 covid_2020 = covid_2020 %>% dplyr::select(date, state, cases_avg_per_100k)
@@ -107,36 +131,42 @@ airport$FL_DATE = airport$FL_DATE %>% as.Date(format = "%m/%d/%Y")
 
 airport_covid = left_join(airport, covid_2020, by=c("FL_DATE" = "date", "ORIGIN_STATE_NM" = "state"))
 airport_covid = airport_covid %>% mutate(cases_avg_per_100k = replace_na(cases_avg_per_100k, 0))
+
+#dropping  irrelevant columns
 cols = c("MONTH","DAY_OF_MONTH","DAY_OF_WEEK","FL_DATE", "MKT_UNIQUE_CARRIER", "MKT_CARRIER_FL_NUM","TAIL_NUM", "ORIGIN", "ORIGIN_STATE_NM", "DEST", "DEST_STATE_NM", "CRS_DEP_TIME", "CRS_ARR_TIME", "ARR_DELAY_NEW","ARR_DEL15", "CANCELLED", "CANCELLATION_CODE", "CRS_ELAPSED_TIME", "DISTANCE", "cases_avg_per_100k")
 airport_covid = airport_covid[,cols]
+
+#factorizing the categorical variables
 cols1 = c("MONTH","DAY_OF_MONTH","DAY_OF_WEEK","MKT_UNIQUE_CARRIER", "TAIL_NUM", "ORIGIN", "ORIGIN_STATE_NM", "DEST", "DEST_STATE_NM","ARR_DEL15", "CANCELLED", "CANCELLATION_CODE")
 airport_covid[cols1] <- lapply(airport_covid[cols1], as.factor)
 airport_covid
 ```
 
-Random Variables
+focusing on california
 
-```{r California}
+```{r train-test-split}
 #train/test split for California
 airport_covid_California = airport_covid %>% filter(ORIGIN_STATE_NM == "California")
 airport_covid_California$ORIGIN = droplevels(airport_covid_California$ORIGIN)
-airport_covid_split = initial_split(airport_covid_California, 0.8)
-airport_covid_train = training(airport_covid_split)
-airport_covid_test = testing(airport_covid_split)
+airport_covid_California_split = initial_split(airport_covid_California, 0.8)
+airport_covid_California_train = training(airport_covid_California_split)
+airport_covid_California_test = testing(airport_covid_California_split)
 
-airport_covid_delayed = airport_covid %>% filter(ARR_DEL15 == 1)
-airport_covid_delayed_California = airport_covid_delayed %>% filter(ORIGIN_STATE_NM == "California")
-airport_covid_delayed_California$ORIGIN = droplevels(airport_covid_delayed_California$ORIGIN)
-airport_covid_delayed_split = initial_split(airport_covid_delayed_California, 0.8)
-airport_covid_delayed_train = training(airport_covid_delayed_split)
-airport_covid_delayed_test = testing(airport_covid_delayed_split)
+#train/test split for Texas
+airport_covid_Texas = airport_covid %>% filter(ORIGIN_STATE_NM == "Texas")
+airport_covid_Texas$ORIGIN = droplevels(airport_covid_Texas$ORIGIN)
+airport_covid_Texas_split = initial_split(airport_covid_Texas, 0.8)
+airport_covid_Texas_train = training(airport_covid_Texas_split)
+airport_covid_Texas_test = testing(airport_covid_Texas_split)
 ```
 
 ```{r, eval=FALSE}
+#abandoned random forest model - too many zeros in the dependent variable
 rfCalifornia = randomForest(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + DISTANCE + cases_avg_per_100k, data=airport_covid_train, na.action=na.omit, ntree = 50, mtry = 6, importance = TRUE)
 ```
 
 ```{r, eval = FALSE}
+#abandoned knn model - too many zeros in the dependent variable
 k_grid = seq(5,20,by=5)
 cv_grid = foreach(k = k_grid, .combine='rbind') %do% {
   knn = knnreg(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE + cases_avg_per_100k, airport_covid_train, k=k)
@@ -158,179 +188,198 @@ knnCalifornia = knnreg(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER 
 rmse(knnCalifornia, data=airport_covid_test)
 ```
 
+```{r delayrate-logit}
+### Did Covid cases cause more delays?
+## California
+logitCalifornia_del = glm(ARR_DEL15 ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST_STATE_NM + DISTANCE + cases_avg_per_100k, data=airport_covid_California_train, na.action = na.omit, family="binomial")
 
-```{r}
-#linear regression for California
-lmCalifornia <- lm(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + DISTANCE + cases_avg_per_100k, data = airport_covid_train, na.action = na.omit)
+logitCalifornia_del_pred = predict(logitCalifornia_del, airport_covid_California_test, type="response")  
+# predicted probabilities
+yhatCalifornia_del = ifelse(logitCalifornia_del_pred > 0.5, 1, 0)
+confusion_out = table(y = airport_covid_California_test$ARR_DEL15, yhat = yhatCalifornia_del)
+kable(confusion_out)
+
+# out of sample accuracy for k=0.5
+sum(diag(confusion_out))/sum(confusion_out)
+
+rocobj <- plot.roc(airport_covid_California_test$CANCELLED, yhatCalifornia_del,
+                   main = "Confidence intervals", 
+                   percent=TRUE,
+                   ci = TRUE,                  # compute AUC (of AUC by default)
+                   print.auc = TRUE)           # print the AUC (will contain the CI)
+
+## Texas
+logitTexas_del = glm(ARR_DEL15 ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST_STATE_NM + DISTANCE + cases_avg_per_100k, data= airport_covid_Texas_train, na.action = na.omit, family="binomial")
+
+logitTexas_del_pred = predict(logitTexas_del, airport_covid_Texas_test, type="response")  # predicted probabilities
+yhatTexas_del = ifelse(logitTexas_del_pred > 0.5, 1, 0)
+confusion_out = table(y = airport_covid_Texas_test$ARR_DEL15, yhat = yhatTexas_del)
+kable(confusion_out)
+
+# out of sample accuracy for k=0.5
+sum(diag(confusion_out))/sum(confusion_out)
+
+rocobj <- plot.roc(airport_covid_Texas_test$CANCELLED, yhatTexas_del,
+                   main = "Confidence intervals", 
+                   percent=TRUE,
+                   ci = TRUE,                  # compute AUC (of AUC by default)
+                   print.auc = TRUE)           # print the AUC (will contain the CI)
+```
+
+```{r cancellationrate-logit}
+## seeing the effect of covid on cancellations
+
+# California
+logitCalifornia = glm(CANCELLED ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST_STATE_NM + DISTANCE + cases_avg_per_100k, data= airport_covid_California_train, na.action = na.omit, family="binomial")
+
+logitCalifornia_pred = predict(logitCalifornia, airport_covid_California_test, type="response")  # predicted probabilities
+yhatCalifornia = ifelse(logitCalifornia_pred > 0.5, 1, 0)
+confusion_out = table(y = airport_covid_California_test$CANCELLED, yhat = yhatCalifornia)
+kable(confusion_out)
+
+# out of sample accuracy for k=0.5
+sum(diag(confusion_out))/sum(confusion_out)
+
+rocobj <- plot.roc(airport_covid_California_test$CANCELLED, yhatCalifornia,
+                   main = "Confidence intervals", 
+                   percent=TRUE,
+                   ci = TRUE,                  # compute AUC (of AUC by default)
+                   print.auc = TRUE)           # print the AUC (will contain the CI)
+
+#Texas
+logitTexas = glm(CANCELLED ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST_STATE_NM  + DISTANCE + cases_avg_per_100k, data= airport_covid_Texas_train, na.action = na.omit, family="binomial")
+
+logitTexas_pred = predict(logitTexas, airport_covid_Texas_test, type="response")  # predicted probabilities
+yhatTexas = ifelse(logitTexas_pred > 0.5, 1, 0)
+confusion_out = table(y = airport_covid_Texas_test$CANCELLED, yhat = yhatTexas)
+kable(confusion_out)
+
+# out of sample accuracy for k=0.5
+sum(diag(confusion_out))/sum(confusion_out)
+
+rocobj <- plot.roc(airport_covid_Texas_test$CANCELLED, yhatTexas,
+                   main = "Confidence intervals", 
+                   percent=TRUE,
+                   ci = TRUE,                  # compute AUC (of AUC by default)
+                   print.auc = TRUE)           # print the AUC (will contain the CI)
+```
+
+```{r cancellation-tree}
+#prunefunction - not used (didn't make it better)
+# prune_1se = function(my_tree) {
+#   out = as.data.frame(my_tree$cptable)
+#   thresh = min(out$xerror + out$xstd)
+#   cp_opt = max(out$CP[out$xerror <= thresh])
+#   prune(my_tree, cp=cp_opt)
+# }
+
+## California
+california.tree.cancel = rpart(CANCELLED ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST_STATE_NM + DISTANCE + cases_avg_per_100k, data=airport_covid_California_train, control = rpart.control(cp = 0.002, minsplit=30), na.action = na.omit)
+
+rpart.plot(california.tree.cancel, type=4)
+vip(california.tree.cancel)
+
+# RMSE value for out of sample
+modelr::rmse(california.tree.cancel, airport_covid_California_test)
+
+texas.tree.cancel <- rpart(CANCELLED ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST_STATE_NM  + DISTANCE + cases_avg_per_100k, data = airport_covid_Texas_train, na.action = na.omit)
+
+rpart.plot(texas.tree.cancel, type=4)
+vip(texas.tree.cancel)
+
+# RMSE value for out of sample
+modelr::rmse(texas.tree.cancel, airport_covid_Texas_test)
+```
+
+```{r delay-LM}
+# linear regression on delay time (including 0)
+
+## California
+lmCalifornia <- lm(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + DISTANCE + cases_avg_per_100k, data = airport_covid_California_train, na.action = na.omit)
 summary(lmCalifornia)
-lmCalifornia_pred = predict(lmCalifornia, data = airport_covid_test)
-sqrt(mean((airport_covid_test$ARR_DELAY_NEW %>% na.omit - lmCalifornia_pred)^2))
+lmCalifornia_pred = predict(lmCalifornia, data = airport_covid_California_test)
+sqrt(mean((airport_covid_California_test$ARR_DELAY_NEW %>% na.omit - lmCalifornia_pred)^2))
+
+## Texas
+lmTexas <- lm(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + DISTANCE + cases_avg_per_100k, data = airport_covid_Texas_train, na.action = na.omit)
+lmTexas_pred = predict(lmTexas, data = airport_covid_Texas_test)
+sqrt(mean((airport_covid_Texas_test$ARR_DELAY_NEW %>% na.omit - lmTexas_pred)^2))
 ```
 
 Beta coefficient = 0.1170830. The partial effect of cases_avg_per_100k on the airline delay.
 
-```{r, eval = FALSE}
-#zero inflatied poisson regression for California
-zipCalifornia <- zeroinfl(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + DISTANCE + cases_avg_per_100k | cases_avg_per_100k, data = airport_covid_train, na.action = na.omit)
+```{r delay-ZIP}
+#zero inflatied poisson regression
+
+## California
+zipCalifornia <- zeroinfl(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + DISTANCE + cases_avg_per_100k | cases_avg_per_100k, data = airport_covid_California_train, na.action = na.omit)
 summary(zipCalifornia)
-zipCalifornia_pred = predict(zipCalifornia, type="response", data = airport_covid_test)
-sqrt(mean((airport_covid_test$ARR_DELAY_NEW %>% na.omit - zipCalifornia_pred)^2))
+zipCalifornia_pred = predict(zipCalifornia, type="response", data = airport_covid_California_test)
+sqrt(mean((airport_covid_California_test$ARR_DELAY_NEW %>% na.omit - zipCalifornia_pred)^2))
+
+## Texas
+zipTexas <- zeroinfl(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + DISTANCE + cases_avg_per_100k | cases_avg_per_100k, data = airport_covid_Texas_train, na.action = na.omit)
+summary(zipTexas)
+zipTexas_pred = predict(zipTexas, type="response", data = airport_covid_Texas_test)
+sqrt(mean((airport_covid_Texas_test$ARR_DELAY_NEW %>% na.omit - zipCalifornia_pred)^2))
 ```
 
 For the zero-inflated poisson model, the first process generates zeros and the second process is governed by a Poisson distribution that generates counts, some of which may be zero. In this model building, the assumption is that the covid cases would generate the non-zero counts.
 
-```{r}
-# seeing the effect of covid on cancellations
-logitCalifornia = glm(CANCELLED ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE + cases_avg_per_100k, data= airport_covid_train, na.action = na.omit, family="binomial")
-
-logitCalifornia_pred = predict(logitCalifornia, airport_covid_test, type="response")  # predicted probabilities
-yhatCalifornia = ifelse(logitCalifornia_pred > 0.5, 1, 0)
-confusion_out = table(y = airport_covid_test$CANCELLED, yhat = yhatCalifornia)
-kable(confusion_out)
-
-# out of sample accuracy for k=0.5
-sum(diag(confusion_out))/sum(confusion_out)
-
-rocobj <- plot.roc(airport_covid_test$CANCELLED, yhatCalifornia,
-                   main = "Confidence intervals", 
-                   percent=TRUE,
-                   ci = TRUE,                  # compute AUC (of AUC by default)
-                   print.auc = TRUE)           # print the AUC (will contain the CI)
-```
-```{r}
-# seeing the effect of covid on cancellations
-logitCalifornia_del = glm(ARR_DEL15 ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE + cases_avg_per_100k, data= airport_covid_train, na.action = na.omit, family="binomial")
-
-logitCalifornia_del_pred = predict(logitCalifornia_del, airport_covid_test, type="response")  # predicted probabilities
-yhatCalifornia_del = ifelse(logitCalifornia_del_pred > 0.5, 1, 0)
-confusion_out = table(y = airport_covid_test$ARR_DEL15, yhat = yhatCalifornia_del)
-kable(confusion_out)
-
-# out of sample accuracy for k=0.5
-sum(diag(confusion_out))/sum(confusion_out)
-
-rocobj <- plot.roc(airport_covid_test$CANCELLED, yhatCalifornia_del,
-                   main = "Confidence intervals", 
-                   percent=TRUE,
-                   ci = TRUE,                  # compute AUC (of AUC by default)
-                   print.auc = TRUE)           # print the AUC (will contain the CI)
-```
-
-
-```{r}
-california.tree = rpart(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE + cases_avg_per_100k, data=airport_covid_train, control = rpart.control(cp = 0.002, minsplit=30))
-
-prune_1se = function(my_tree) {
-  out = as.data.frame(my_tree$cptable)
-  thresh = min(out$xerror + out$xstd)
-  cp_opt = max(out$CP[out$xerror <= thresh])
-  prune(my_tree, cp=cp_opt)
-}
-
-california.prune = prune_1se(california.tree)
+```{r delay-tree}
+california.tree = rpart(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST_STATE_NM  + DISTANCE + cases_avg_per_100k, data=airport_covid_California_train, control = rpart.control(cp = 0.001, minsplit=30))
 
 rpart.plot(california.tree, type=4)
+vip(california.tree)
 
 # RMSE value for out of sample
-modelr::rmse(california.tree, airport_covid_test)
-modelr::rmse(california.prune, airport_covid_test)
-```
+modelr::rmse(california.tree, airport_covid_California_test)
 
-```{r}
-california.tree.cancel = rpart(CANCELLED ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE + cases_avg_per_100k, data=airport_covid_train, control = rpart.control(cp = 0.002, minsplit=30), na.action = na.omit)
+## Texas
+texas.tree = rpart(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST_STATE_NM  + DISTANCE + cases_avg_per_100k, data=airport_covid_Texas_train, control = rpart.control(cp = 0.001, minsplit=30))
 
-california.prune.cancel = prune_1se(california.tree.cancel)
-
-rpart.plot(california.tree.cancel, type=4)
+rpart.plot(texas.tree, type=4)
+vip(texas.tree)
 
 # RMSE value for out of sample
-modelr::rmse(california.prune.cancel, airport_covid_test)
+modelr::rmse(texas.tree, airport_covid_Texas_test)
 ```
 
+```{r delaytime-ifdelayed-train-test-split}
+#seeing the effect on delayed time given it's delayed for California
+airport_covid_delayed = airport_covid %>% filter(ARR_DEL15 == 1)
+airport_covid_delayed_California = airport_covid_delayed %>% filter(ORIGIN_STATE_NM == "California")
+airport_covid_delayed_California$ORIGIN = droplevels(airport_covid_delayed_California$ORIGIN)
+airport_covid_delayed_California_split = initial_split(airport_covid_delayed_California, 0.8)
+airport_covid_delayed_California_train = training(airport_covid_delayed_California_split)
+airport_covid_delayed_California_test = testing(airport_covid_delayed_California_split)
 
-```{r Texas}
-#train/test split for Rexas
-airport_covid_Texas = airport_covid %>% filter(ORIGIN_STATE_NM == "Texas")
+airport_covid_delayed_Texas = airport_covid %>% filter(ARR_DEL15 == 1) %>% filter(ORIGIN_STATE_NM == "Texas")
 airport_covid_Texas$ORIGIN = droplevels(airport_covid_Texas$ORIGIN)
-airport_covid_split = initial_split(airport_covid_Texas, 0.8)
-airport_covid_train = training(airport_covid_split)
-airport_covid_test = testing(airport_covid_split)
+airport_covid_delayed_Texas_split = initial_split(airport_covid_delayed_Texas, 0.8)
+airport_covid_delayed_Texas_train = training(airport_covid_delayed_Texas_split)
+airport_covid_delayed_Texas_test = testing(airport_covid_delayed_Texas_split)
 ```
 
-```{r}
-#linear regression for California
-lmTexas <- lm(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + DISTANCE + cases_avg_per_100k, data = airport_covid_train, na.action = na.omit)
-lmTexas_pred = predict(lmTexas, data = airport_covid_test)
-sqrt(mean((airport_covid_test$ARR_DELAY_NEW %>% na.omit - lmTexas_pred)^2))
+```{r rf-delaytime}
+#random forest model
+## California
+rfCalifornia_delayed = randomForest(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + 
+                                      MKT_UNIQUE_CARRIER + DISTANCE + cases_avg_per_100k,
+                                    data=airport_covid_delayed_California_train, na.action=na.omit, 
+                                    ntree = 500, importance = TRUE)
+rmse(rfCalifornia_delayed, data=airport_covid_delayed_California_test)
+varImpPlot(rfCalifornia_delayed, type=1)
+partialPlot(rfCalifornia_delayed, airport_covid_delayed_California_test, 'cases_avg_per_100k')
+
+## Texas
+rfTexas_delayed = randomForest(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + 
+                                  MKT_UNIQUE_CARRIER + DISTANCE + cases_avg_per_100k, 
+                               data=airport_covid_delayed_Texas_train, na.action=na.omit, 
+                               ntree = 500, importance = TRUE)
+rmse(rfTexas_delayed, data=airport_covid_delayed_Texas_test)
+varImpPlot(rfTexas_delayed, type=1)
+partialPlot(rfTexas_delayed, airport_covid_delayed_Texas_test, 'cases_avg_per_100k')
 ```
 
-```{r}
-# seeing the effect of covid on cancellations
-logitTexas = glm(CANCELLED ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE + cases_avg_per_100k, data= airport_covid_train, na.action = na.omit, family="binomial")
-
-logitTexas_pred = predict(logitTexas, airport_covid_test, type="response")  # predicted probabilities
-yhatTexas = ifelse(logitTexas_pred > 0.5, 1, 0)
-confusion_out = table(y = airport_covid_test$CANCELLED, yhat = yhatTexas)
-kable(confusion_out)
-
-# out of sample accuracy for k=0.5
-sum(diag(confusion_out))/sum(confusion_out)
-
-rocobj <- plot.roc(airport_covid_test$CANCELLED, yhatTexas,
-                   main = "Confidence intervals", 
-                   percent=TRUE,
-                   ci = TRUE,                  # compute AUC (of AUC by default)
-                   print.auc = TRUE)           # print the AUC (will contain the CI)
-```
-
-```{r}
-texas.tree = rpart(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE + cases_avg_per_100k, data=airport_covid_train, control = rpart.control(cp = 0.002, minsplit=30))
-
-prune_1se = function(my_tree) {
-  out = as.data.frame(my_tree$cptable)
-  thresh = min(out$xerror + out$xstd)
-  cp_opt = max(out$CP[out$xerror <= thresh])
-  prune(my_tree, cp=cp_opt)
-}
-
-texas.prune = prune_1se(texas.tree)
-
-# RMSE value for out of sample
-modelr::rmse(texas.prune, airport_covid_test)
-```
-
-```{r}
-# tree cancellation Texas
-texas.tree.cancel <- rpart(CANCELLED ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + DISTANCE + cases_avg_per_100k, data = airport_covid_train, na.action = na.omit)
-
-texas.prune.cancel = prune_1se(texas.tree)
-
-# RMSE value for out of sample
-modelr::rmse(texas.prune.cancel, airport_covid_test)
-```
-
-```{r}
-# seeing the effect of covid on cancellations
-logitTexas_del = glm(ARR_DEL15 ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE + cases_avg_per_100k, data= airport_covid_train, na.action = na.omit, family="binomial")
-
-logitTexas_del_pred = predict(logitTexas_del, airport_covid_test, type="response")  # predicted probabilities
-yhatTexas_del = ifelse(logitTexas_del_pred > 0.5, 1, 0)
-confusion_out = table(y = airport_covid_test$ARR_DEL15, yhat = yhatTexas_del)
-kable(confusion_out)
-
-# out of sample accuracy for k=0.5
-sum(diag(confusion_out))/sum(confusion_out)
-
-rocobj <- plot.roc(airport_covid_test$CANCELLED, yhatTexas_del,
-                   main = "Confidence intervals", 
-                   percent=TRUE,
-                   ci = TRUE,                  # compute AUC (of AUC by default)
-                   print.auc = TRUE)           # print the AUC (will contain the CI)
-```
-
-
-
-
-
-
-
+Including `ORIGIN` only reduced the rMSE from 97.35954 to 97.20708. removing the variable for the entire country analysis, as there are too many levels.
