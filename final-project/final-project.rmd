@@ -123,6 +123,13 @@ airport_covid_California$ORIGIN = droplevels(airport_covid_California$ORIGIN)
 airport_covid_split = initial_split(airport_covid_California, 0.8)
 airport_covid_train = training(airport_covid_split)
 airport_covid_test = testing(airport_covid_split)
+
+airport_covid_delayed = airport_covid %>% filter(ARR_DEL15 == 1)
+airport_covid_delayed_California = airport_covid_delayed %>% filter(ORIGIN_STATE_NM == "California")
+airport_covid_delayed_California$ORIGIN = droplevels(airport_covid_delayed_California$ORIGIN)
+airport_covid_delayed_split = initial_split(airport_covid_delayed_California, 0.8)
+airport_covid_delayed_train = training(airport_covid_delayed_split)
+airport_covid_delayed_test = testing(airport_covid_delayed_split)
 ```
 
 ```{r, eval=FALSE}
