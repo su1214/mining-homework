@@ -19,26 +19,18 @@ library(parallel)
 library(MASS)
 library(pscl)
 library(caret)
+library(parallel)
+library(foreach)
+library(modelr)
 ```
 
 ```{r}
 airport = read.csv("Data/jantojun2020.csv")
 ```
 
-Let's look at the airlines in specific. In specific which airline has carried the most 
-number of flights.
+Let's look at the airlines in specific. In specific which airline has carried the most number of flights.
 
-Airline Carrier Code: 
-AA: American Airlines 
-AS: Alaska Airlines 
-B6: JetBlue 
-DL: Delta Air Lines 
-F9: Frontier Airlines 
-G4: Allegiant Air 
-HA: Hawaiian Airlines 
-NK: Spirit Airlines 
-UA: United Airlines 
-WN: Southwest Airlines
+Airline Carrier Code: AA: American Airlines AS: Alaska Airlines B6: JetBlue DL: Delta Air Lines F9: Frontier Airlines G4: Allegiant Air HA: Hawaiian Airlines NK: Spirit Airlines UA: United Airlines WN: Southwest Airlines
 
 ```{r}
 #total numbers of flights by each carrier
@@ -49,13 +41,13 @@ ggplot(airport_sum) +
 ```
 
 Let's analyse which airport has the most delays
+
 ```{r}
 #proportion of delayed flights by airlines
 airline_whether_delay = airport %>% group_by(MKT_UNIQUE_CARRIER) %>% summarise(delayed = mean(ARR_DEL15, na.rm=TRUE))
 ggplot(airline_whether_delay) +
   geom_col(aes(x=MKT_UNIQUE_CARRIER, y=delayed))
 ```
-
 
 ```{r}
 #average delay time of the delayed (more than 15 mins) flights by airlines
@@ -88,16 +80,12 @@ ggplot(tail(airport_delay)) +
   geom_col(aes(x=DEST, y=delay))
 ```
 
-
-
-
 ```{r}
 airport_lookup("OGD", input_type = "IATA", output_type = "name")
 airport_lookup("BRD", input_type = "IATA", output_type = "name")
 
 #airport_del = airport_del %>% mutate(name = airport_lookup(DEST, input_type = "IATA", output_type = "name"))
 ```
-
 
 ```{r}
 covid_2020 = read.csv("Data/us-states.csv") %>% mutate(year = substring(date,1,4)) %>% filter(year == 2020)
@@ -120,37 +108,53 @@ airport_covid
 Random Variables
 
 ```{r California}
-#supervied models for California
+#train/test split for California
 airport_covid_California = airport_covid %>% filter(ORIGIN_STATE_NM == "California")
 airport_covid_California$ORIGIN = droplevels(airport_covid_California$ORIGIN)
 airport_covid_split = initial_split(airport_covid_California, 0.8)
 airport_covid_train = training(airport_covid_split)
 airport_covid_test = testing(airport_covid_split)
+```
+
+```{r, eval=FALSE}
 rfCalifornia = randomForest(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + DISTANCE + cases_avg_per_100k, data=airport_covid_train, na.action=na.omit, ntree = 50, mtry = 6, importance = TRUE)
 ```
 
 ```{r}
-k_grid = seq(5,100,by=10)
-cv_grid = foreach(k = k_grid, .combine='rbind') %dopar% {
-  models = map(airport_covid_train, ~ knnreg(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE + cases_avg_per_100kk, k=k, data = ., use.all=FALSE))
-  errs = map2_dbl(models, airport_covid_test, modelr::rmse)
-  c(k=k, err = mean(errs), std_err = sd(errs)/sqrt(K_folds))
+k_grid = seq(5,20,by=5)
+cv_grid = foreach(k = k_grid, .combine='rbind') %do% {
+  knn = knnreg(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE + cases_avg_per_100k, airport_covid_train, k=k)
+  rms = rmse(knn, airport_covid_test)
+  c(k=k, err=rms)
 } %>% as.data.frame
+
+ggplot(cv_grid) + 
+  geom_point(aes(x=k, y=err)) + 
+  labs(y = 'RMSE') +
+  scale_x_log10() +
+  labs(title = "RMSE Plot for KNN Models")
 
 cv_grid_final = cv_grid %>% filter(err == min(cv_grid$err))
 rownames(cv_grid_final) = c("KNN Model")
-cv_grid_final = rbind(cv_grid_final, data.frame(k="NA", err = mean(errs), std_err = sd(errs)/sqrt(K_folds),  row.names = c("Linear Model"))) %>% dplyr::select(-std_err)
 colnames(cv_grid_final) = c("k", "rMSE")
+
+knnCalifornia = knnreg(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE + cases_avg_per_100k, airport_covid_train, k=5)
+rmse(knnCalifornia, data=airport_covid_test)
+```
+```{r}
+#zero inflatied poisson regression for California
+lmCalifornia <- lm(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + DISTANCE + cases_avg_per_100k | cases_avg_per_100k, data = airport_covid_train, na.action = na.omit)
+summary(lmCalifornia)
+lmCalifornia_pred = predict(lmCalifornia, data = airport_covid_test)
+sqrt(mean((airport_covid_test$ARR_DELAY_NEW %>% na.omit - lmCalifornia_pred)^2))
 ```
 
 ```{r}
 #zero inflatied poisson regression for California
-zipCalifornia <- zeroinfl(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST + DISTANCE + cases_avg_per_100k | cases_avg_per_100k, data = airport_covid_train)
+zipCalifornia <- zeroinfl(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + DISTANCE + cases_avg_per_100k | cases_avg_per_100k, data = airport_covid_train, na.action = na.omit)
 summary(zipCalifornia)
+zipCalifornia_pred = predict(zipCalifornia, type="response", data = airport_covid_test)
+sqrt(mean((airport_covid_test$ARR_DELAY_NEW %>% na.omit - zipCalifornia_pred)^2))
 ```
 
-
-
-
-
-
+For the zero-inflated poisson model, the first process generates zeros and the second process is governed by a Poisson distribution that generates counts, some of which may be zero. In this model building, the assumption is that the covid cases would generate the non-zero counts.
