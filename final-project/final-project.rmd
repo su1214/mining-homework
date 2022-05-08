@@ -73,41 +73,41 @@ ggplot(airport_sum) +
 
 Let's analyse which airport has the most delays
 
-```{r delay_by_airlines}
+```{r delay_by_airlines, eval=FALSE}
 #proportion of delayed flights by airlines
 airline_whether_delay = airport %>% group_by(MKT_UNIQUE_CARRIER) %>% summarise(delayed = mean(ARR_DEL15, na.rm=TRUE))
 ggplot(airline_whether_delay) +
   geom_col(aes(x=MKT_UNIQUE_CARRIER, y=delayed))
 ```
 
-```{r delay_times_by_airlines}
+```{r delay_times_by_airlines, eval=FALSE}
 #average delay time of the delayed (more than 15 mins) flights by airlines
 airline_delay = airport %>% filter(ARR_DEL15 == 1) %>% group_by(MKT_UNIQUE_CARRIER) %>% summarise(delay = mean(ARR_DELAY_NEW)) %>% arrange(desc(delay))
 ggplot(airline_delay) +
   geom_col(aes(x=MKT_UNIQUE_CARRIER, y=delay))
 ```
 
-```{r delay_by_airport1}
+```{r delay_by_airport1, eval=FALSE}
 # top airports with most delays
 airport_whether_delay = airport %>% group_by(DEST) %>% summarise(delayed = mean(ARR_DEL15, na.rm=TRUE)) %>% arrange(desc(delayed))
 ggplot(head(airport_whether_delay)) +
   geom_col(aes(x=DEST, y=delayed))
 ```
 
-```{r delay_by_airport2}
+```{r delay_by_airport2, eval=FALSE}
 # top airports with least delays
 ggplot(tail(airport_whether_delay)) +
   geom_col(aes(x=DEST, y=delayed))
 ```
 
-```{r delay_times_by_airport1}
+```{r delay_times_by_airport1, eval=FALSE}
 #average delay time of the delayed (more than 15 mins) flights by airports, top 6
 airport_delay = airport %>% filter(ARR_DEL15 == 1) %>% group_by(DEST) %>% summarise(delay = mean(ARR_DELAY_NEW)) %>% arrange(desc(delay))
 ggplot(head(airport_delay)) +
   geom_col(aes(x=DEST, y=delay))
 ```
 
-```{r delay_times_by_airport2}
+```{r delay_times_by_airport2, eval=TRUE}
 #average delay time of the delayed (more than 15 mins) flights by airports, bottom 6
 ggplot(tail(airport_delay)) +
   geom_col(aes(x=DEST, y=delay))
@@ -139,7 +139,6 @@ airport_covid = airport_covid[,cols]
 #factorizing the categorical variables
 cols1 = c("MONTH","DAY_OF_MONTH","DAY_OF_WEEK","MKT_UNIQUE_CARRIER", "TAIL_NUM", "ORIGIN", "ORIGIN_STATE_NM", "DEST", "DEST_STATE_NM","ARR_DEL15", "CANCELLED", "CANCELLATION_CODE")
 airport_covid[cols1] <- lapply(airport_covid[cols1], as.factor)
-airport_covid
 ```
 
 focusing on california
