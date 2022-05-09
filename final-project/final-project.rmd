@@ -5,8 +5,8 @@ date: ""
 output:
   pdf_document:
     latex_engine: xelatex
-    fig_width : 5.5
-    fig_height: 3
+    fig_width : 6
+    fig_height: 4.5
 header-includes:
    - \usepackage{setspace}
    - \setstretch{1.2}
@@ -92,11 +92,7 @@ flight delay and cancellations. Not only COVID-19 would have reduced the demand 
 counter-measures such as lockdowns are expected to negatively impacted the flights' on-time performance.
 Plus, if crew members had been exposed to the virus, they would have been required to quarantine which would 
 likely cause the flight to be delayed or cancelled. Therefore, we would like to analyze the relationship between 
-the COVID-19 cases and the delay and cancellation of the flights. We do this by asking three separate but related 
-questions: "Is a flight more likely to be delayed with a higher number of cases of COVID-19?", "Is a flight more 
-likely to be cancelled with a higher number of cases of COVID-19?", and "If a flight is delayed, is it expected to 
-be delayed for longer with a higher number of cases of COVID-19?". The rest of our report goes in detail to explain 
-how we estimated the effect.
+the COVID-19 cases and the delay and cancellation of the flights. 
 
 ```{r, scatterplot}
 scatterCalifornia = ggplot(airport_covid_California) +
@@ -106,6 +102,15 @@ scatterTexas = ggplot(airport_covid_Texas) +
 grid.arrange(scatterCalifornia, scatterTexas, ncol=2,
              top="Figure 4. ")
 ```
+
+From the graph above, the relationship between the number COVID cases and the flight delay is not apparent in both 
+California and Texas cases. This motivated us to conduct more rigorous analyses with controlling other factors that could 
+be associated with flight delays, so see partial effect (or dependence) of the number of COVID-19 cases. 
+We do this by asking three separate but related 
+questions: "Is a flight more likely to be delayed with a higher number of cases of COVID-19?", "Is a flight more 
+likely to be cancelled with a higher number of cases of COVID-19?", and "If a flight is delayed, is it expected to 
+be delayed for longer with a higher number of cases of COVID-19?". The rest of our report goes in detail to explain 
+how we estimated the effect.
 
 # Methods 
 
