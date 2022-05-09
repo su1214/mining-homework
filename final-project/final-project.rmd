@@ -150,18 +150,19 @@ With the dataset, we used various models to answer the questions.
 The dependent variables of interest are `ARR_DEL15`, `ARR_DELAY_NEW`, `CANCELLED`.
 First, we look at `ARR_DEL15` and `CANCELLED`. They are binary variables, which call for classification models.
 We used a logit model to predict `ARR_DEL15` and logit and tree models to predict `CANCELLED`. 
+We used the tree model with a complexity parameter of 0.005 and minsplit of 30 since we have a lot of observations in both the cases of California and Texas. We adjusted the parameters by looking at the results and picking the adequate looking trees.
 They all have `MONTH`, `DAY_OF_WEEK`, `MKT_UNIQUE_CARRIER`, `ORIGIN`, `DEST_STATE_NM`, `DISTANCE`, and `cases_avg_per_100k` as features. We wanted to control for the origin and destination airports, but that would involve 
 too many levels for categorical variables. Therefore, we included the destination state instead of the destination 
 airport. We added month, day of week, carrier and distance to control for other causes than COVID cases.
 
 Next, we look at `ARR_DELAY_NEW`. `ARR_DELAY_NEW` is 0 if the flight is not delayed and has the minutes of delay 
 if the flight is delayed. Since the majority of the flights are not delayed, this variable has a lot of zeros compared 
-to the other numbers. For this reason, we used zero-inflated poisson models, hoping that this would be more accurate. Although it is typically used for count data with many zeros and our varaible of interest is time, I thought it is worth 
-trying this model as we have discrete time values in minutes. We compare the results in this model with the basic linear model. For the zero-inflated poisson model, the first process generates zeros and the second process is governed by a Poisson distribution that generates counts, some of which may be zero. In this model building, the assumption is that the covid cases would generate the non-zero counts. They both have `MONTH`, `DAY_OF_WEEK`, `MKT_UNIQUE_CARRIER`, `DISTANCE`, and `cases_avg_per_100k` for same reasons as before, with `ORIGIN` and `DEST_STATE_NM` also exculded for having too many categories. We also use tree models to predict ``ARR_DELAY_NEW`. This has `MONTH`, `DAY_OF_WEEK`, `MKT_UNIQUE_CARRIER`, `ORIGIN`, `DEST_STATE_NM`, `DISTANCE`, and `cases_avg_per_100k`as features.
+to the other numbers. For this reason, we used zero-inflated poisson models, hoping that this would be more accurate. Although it is typically used for count data with many zeros and our variable of interest is time, I thought it is worth 
+trying this model as we have discrete time values in minutes. We compare the results in this model with the basic linear model. For the zero-inflated poisson model, the first process generates zeros and the second process is governed by a Poisson distribution that generates counts, some of which may be zero. In this model building, the assumption is that the COVID cases would generate the non-zero counts. They both have `MONTH`, `DAY_OF_WEEK`, `MKT_UNIQUE_CARRIER`, `DISTANCE`, and `cases_avg_per_100k` for same reasons as before, with `ORIGIN` and `DEST_STATE_NM` also excluded for having too many categories. We also use tree models to predict ``ARR_DELAY_NEW`. This has `MONTH`, `DAY_OF_WEEK`, `MKT_UNIQUE_CARRIER`, `ORIGIN`, `DEST_STATE_NM`, `DISTANCE`, and `cases_avg_per_100k`as features. We used the tree model with a complexity parameter of 0.0009 and minsplit of 30. We adjusted the parameters by looking at the results and picking the adequate looking trees.
 
 Another way to look at the `ARR_DELAY_NEW` variable is to focus on the flights that are delayed. That is, we can see 
 if the COVID cases would increase the delay time, given the flight is already delayed. We used random forest models 
-to predict this, as it usually performed the best for the homework questions. These also have `MONTH`, `DAY_OF_WEEK`, `MKT_UNIQUE_CARRIER`, `DISTANCE`, and `cases_avg_per_100k`as the features, without `ORIGIN` and `DEST_STATE_NM, for having too many levels.
+to predict this, as it usually performed the best for the homework questions. These also have `MONTH`, `DAY_OF_WEEK`, `MKT_UNIQUE_CARRIER`, `DISTANCE`, and `cases_avg_per_100k`as the features, without `ORIGIN` and `DEST_STATE_NM`, for having too many levels. We used default values for `ntrees` and `mtry`.
 
 # Results
 
@@ -247,11 +248,13 @@ confusion_out_Texas = table(y = airport_covid_Texas_test$CANCELLED, yhat = yhatT
 #                    print.auc = TRUE)           # print the AUC (will contain the CI)
 ```
 
-We looked at the effect of Covid cases on flight cancellations by running a logit regression of `CANCELLED` on `MONTH`, `DAY_OF_WEEK`, `MKT_UNIQUE_CARRIER`, `ORIGIN`, `DEST_STATE_NM`, `DISTANCE`, `cases_avg_per_100k` variables. In the case of California, the model has an out-of-sample accuracy of `r sum(diag(confusion_out_California))/sum(confusion_out_California)`. Whereas the logit model built on the Texas data has an out-of-sample accuracy of  `r sum(diag(confusion_out_Texas))/sum(confusion_out_Texas)`. These accuracies were calculated for a k value of 0.5.
+We looked at the effect of Covid cases on flight cancellations by running a logit regression of `CANCELLED` on `MONTH`, `DAY_OF_WEEK`, `MKT_UNIQUE_CARRIER`, `ORIGIN`, `DEST_STATE_NM`, `DISTANCE`, `cases_avg_per_100k` variables. In the case of California, the model has an out-of-sample accuracy of `r sum(diag(confusion_out_California))/sum(confusion_out_California)`. Whereas the logit model built on the Texas data has an out-of-sample accuracy of  `r sum(diag(confusion_out_Texas))/sum(confusion_out_Texas)`. These accuracy rates were calculated for a k value of 0.5.
 
-For California, the partial effect of `cases_avg_per_100k` is 0.9401 that means if the `cases_avg_per_100k` increases by a unit, the log odds of cancellation will incrase by 0.9401. This effect is statistically significant at even 0.1% significance level. Whereas for Texas, the partial effect of `cases_avg_per_100k` is 0.9928 that means if the `cases_avg_per_100k` increases by a unit, the log odds of cancellation will incrase by 0.9928. This effect is statistically significant at even 0.1% significance level and is slightly higher compared to California.
+For California, the partial effect of `cases_avg_per_100k` is 0.9401 that means if the `cases_avg_per_100k` increases by a unit, the log odds of cancellation will increase by 0.9401. This effect is statistically significant at even 0.1% significance level. Whereas for Texas, the partial effect of `cases_avg_per_100k` is 0.9928 that means if the `cases_avg_per_100k` increases by a unit, the log odds of cancellation will increase by 0.9928. This effect is statistically significant at even 0.1% significance level and is slightly higher compared to California.
 
 ## Cancellation Rates - Tree Model
+
+For California, the initial decision in the tree is based on if the month was April. It is interesting to see the tree model capture the lock downs in April. Further decisions are made based on the type of carrier and distance of the flights. The importance plot shows that `avg_cases_per_100k` had an effect on the flight cancellations. In the case of Texas, the initial decision in the tree is based on if the month was April. It is interesting to see the tree model capture the lock downs in April even in the case of Texas. But the since the lock downs in Texas were not enforced as strictly as California, the left side of the decision tree has further classifications based on the flight carrier, day of the week and cases_avg_per_100k. When we look at the importance plot, Texas clearly deviates from the California. The `avg_cases_per_100k` is the second most important variable, and has played more effect on the flight cancellations.
 
 ```{r cancellation-tree}
 #prunefunction - not used (didn't make it better)
@@ -276,8 +279,6 @@ canc.tree.VIP.TX = vip(texas.tree.cancel) + coord_flip()
 grid.arrange(canc.tree.VIP.CA, canc.tree.VIP.TX, ncol=2,
              top="Figure 4. ")
 ```
-
-We used the tree model with a complexity parameter of 0.005 and minsplit of 30 since we have a lot of observations in both the cases of California and Texas. For California, the initial decision in the tree is based on if the month was April. It is interesting to see the tree model capture the lock downs in April. Further decisions are made based on the type of carrier and distance of the flights. The importance plot shows that `avg_cases_per_100k` had an effect on the flight cancellations. In the case of Texas, the initial decision in the tree is based on if the month was April. It is interesting to see the tree model capture the lock downs in April even in the case of Texas. But the since the lock downs in Texas were not enforced as strictly as California, the left side of the decision tree has further classifications based on the flight carrier, day of the week and cases_avg_per_100k. When we look at the importance plot, Texas clearly deviates from the California. The `avg_cases_per_100k` is the second most important variable, and has played more effect on the flight cancellations.
 
 ## Delay Minutes - Linear Regression
 
@@ -337,7 +338,7 @@ grid.arrange(del.tree.VIP.CA, del.tree.VIP.TX, ncol=2,
              top="Figure 4. ")
 ```
 
-We used the tree model with a complexity parameter of 0.0009 and minsplit of 30 since we have a lot of observations in both the cases of California and Texas. For California, the initial decision in the tree is based on if the average covid cases per 100k was less than 0.32 or not and rest of the decisions are made based on destination states. The importance plot shows that `avg_cases_per_100k` has the biggest effect on the flight cancellations. In the case of Texas, the initial decision in the tree is based on if the average covid cases per 100k was less than 0.2 or not which is less than in the case of California and rest of the decisions are made based on destination states. When we look at the importance plot, Texas follows California with `avg_cases_per_100k` being the most important variable. The out of sample RMSE value for California is 33.38648 and for Texas is 31.45617. The tree looks to preform slightly better for Texas state data.
+For California, the initial decision in the tree is based on if the average covid cases per 100k was less than 0.32 or not and rest of the decisions are made based on destination states. The importance plot shows that `avg_cases_per_100k` has the biggest effect on the flight cancellations. In the case of Texas, the initial decision in the tree is based on if the average covid cases per 100k was less than 0.2 or not which is less than in the case of California and rest of the decisions are made based on destination states. When we look at the importance plot, Texas follows California with `avg_cases_per_100k` being the most important variable. The out of sample RMSE value for California is 33.38648 and for Texas is 31.45617. The tree looks to preform slightly better for Texas state data.
 
 ## Delay Time Effect for Those Delayed - Random Forest Model
 
@@ -403,3 +404,4 @@ Random Forest model for the data with the delayed flights shows that for both Ca
 | NK | Spirit Airlines    |
 | UA | United Airlines    |
 | WN | Southwest Airlines |
+
