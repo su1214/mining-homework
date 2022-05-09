@@ -10,6 +10,7 @@ output:
 header-includes:
    - \usepackage{setspace}
    - \setstretch{1.2}
+   - \usepackage{hyperref}
 ---
 
 ```{r setup, include=FALSE}
