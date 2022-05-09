@@ -177,6 +177,7 @@ to predict this, as it usually performed the best for the homework questions. Th
 ### Did Covid cases cause more delays?
 ## California
 logitCalifornia_del = glm(ARR_DEL15 ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST_STATE_NM + DISTANCE + cases_avg_per_100k, data=airport_covid_California_train, na.action = na.omit, family="binomial")
+logitCalifornia_del$xlevels[["DEST_STATE_NM"]] <- union(logitCalifornia_del$xlevels[["DEST_STATE_NM"]], levels(airport_covid_California_train$y))
 
 logitCalifornia_del_pred = predict(logitCalifornia_del, airport_covid_California_test, type="response")  
 # predicted probabilities
@@ -285,7 +286,7 @@ grid.arrange(canc.tree.VIP.CA, canc.tree.VIP.TX, ncol=2,
              top="Figure 4. ")
 ```
 
-## Delay Minutes - Linear Regression
+## Delay - Linear Regression
 
 ```{r delay-LM}
 # linear regression on delay time (including 0)
@@ -384,16 +385,28 @@ varimpTX = varImpPlot(rfTexas_delayed, type=1)
 partialTX = partialPlot(rfTexas_delayed, airport_covid_delayed_Texas_test, 'cases_avg_per_100k')
 ```
 
-```{r partialplot}
-partialCA
-partialTX
-varimpCA
-varimpTX
-```
-
 Random Forest model for the data with the delayed flights shows that for both California and Texas the `cases_avg_per_100k` is the third most important variable ahead of the `month`. Partial Dependence graph on `cases_avg_per_100k` for California seems to suggest that the delays exponentially increase from 65 mins to 85 mins when the `cases_avg_per_100k` reached 15. But in the case of Texas the range is smaller and the delays fluctuating between 54 and 64 mins. The out of sample RMSE value for California is 93.58049 and for Texas is 81.30241. This suggests that the randomForest model worked better with the Texas state data.
 
 # Conclusion
+
+We have looked at various models to see the relationships between the COVID-19 cases and delays or cancellations of flights departing from Californina or Texas.
+The findings from our models are as follows. First, we ran the logit model on delay rates. The overall out-of-sample accuracy was pretty high in both states' models, 
+around 90%. It turned out that the effect of the number of COVID cases on delay rates was positive and not statistically significant at 10% level in California. 
+In Texas, the effect was positive and statistically significant at even 0.1%. 
+
+Delay Rates - Logit Model
+
+Cancellation Rates - Logit Model
+
+Cancellation Rates - Tree Model
+
+Delay Minutes - Linear Regression
+
+Delay - Zero-Inflated Poisson Regression
+
+Delay - Tree Model
+
+Delay Time Effect for Those Delayed - Random Forest Model
 
 # Appendix
 
