@@ -35,7 +35,7 @@ library(margins)
 
 ```{=latex}
 \begin{abstract}
-This is our abstract.
+This project aims at figuring out the role played by the number of COVID-19 cases on the flight delays and cancellations mainly in the state of California and Texas with the data from January 2020 to June 2020. We use logit models to predict the delay rates and cancellation rates. We use tree models to predict calcellation rates, as well as the flight delay minutes, which is a zero-inflated variable. Because of this, we use zero-inflated poisson model and baseline linear model to estimate the effect of COVID-19 cases on the length of the flight delay. Lastly, we further analyze the flight delay minutes within the delayed flights using random forest models. All models suggest strong positive relationships between the number of COVID-19 cases and all of the dependent variables of interest. This may imply that COVID-19 disruption caused more flight delays and cancellations.
 \end{abstract}
 ```
 
@@ -132,7 +132,13 @@ Data cleaning and preprocessing for the dataset was a four-step process.
 4. Removing the variables that are not used in the analysis to have a cleaner dataset.
 
 The cleaned data set is split into training and testing sets for California and Texas separately. There were 284941 observations with California as the origin state. So California data set has 227952 observations in the training set and 56989 observations in the testing set. Whereas, there were 287693 observations with Texas as the origin state and there are 230154 observations in the training set and 57539 observations in the testing set for Texas. In terms of the air traffic both California and Texas are comparable. The list of variables used in our models are below: 
-                        
+
+```{=latex}
+\begin{center}
+\textbf{\textsf{\large Table 1: Variable Descriptions}}
+\end{center}
+```
+
  
 |     Variable Name    |                                      Description                                     |
 | -------------------- | -------------------------------------------------------------------------------------|
@@ -179,6 +185,7 @@ to predict this, as it usually performed the best for the homework questions. Th
 ### Did Covid cases cause more delays?
 ## California
 logitCalifornia_del = glm(ARR_DEL15 ~ MONTH + DAY_OF_WEEK + MKT_UNIQUE_CARRIER + ORIGIN + DEST_STATE_NM + DISTANCE + cases_avg_per_100k, data=airport_covid_California_train, na.action = na.omit, family="binomial")
+logitCalifornia_del$xlevels[["DEST_STATE_NM"]] <- union(logitCalifornia_del$xlevels[["DEST_STATE_NM"]], levels(airport_covid_California_train$y))
 
 logitCalifornia_del_pred = predict(logitCalifornia_del, airport_covid_California_test, type="response")  
 # predicted probabilities
@@ -304,7 +311,7 @@ lmTexas_pred = predict(lmTexas, data = airport_covid_Texas_test)
 #sqrt(mean((airport_covid_Texas_test$ARR_DELAY_NEW %>% na.omit - lmTexas_pred)^2))
 ```
 
-We looked at the effect of Covid cases on flight cancellations by running a linear regression of `ARR_DELAY_NEW` on `MONTH`, `DAY_OF_WEEK`, `MKT_UNIQUE_CARRIER`, `DISTANCE`, `cases_avg_per_100k` variables. In the case of California, the model has an out-of-sample accuracy of 33.80909. Whereas the linear regression model built on the Texas data has an out-of-sample accuracy of 31.96574. For California, the partial effect of `cases_avg_per_100k` is 0.0925041 that means if the `cases_avg_per_100k` increases by a unit, the arrival delay will increase by 0.0925041. This effect is not statistically significant at even 10% significance level. Whereas for Texas, the partial effect of `cases_avg_per_100k` is 0.2228197 that means if the `cases_avg_per_100k` increases by a unit, the arrival delay will increase by 0.2228197. This effect is statistically significant at even 0.1% significance level and is significantly higher compared to California.
+We looked at the effect of Covid cases on flight cancellations by running a linear regression of `ARR_DELAY_NEW` on `MONTH`, `DAY_OF_WEEK`, `MKT_UNIQUE_CARRIER`, `DISTANCE`, `cases_avg_per_100k` variables. In the case of California, the model has an out-of-sample RMSE of 33.80909. Whereas the linear regression model built on the Texas data has an out-of-sample RMSE of 31.96574. For California, the partial effect of `cases_avg_per_100k` is 0.0925041 that means if the `cases_avg_per_100k` increases by a unit, the arrival delay will increase by 0.0925041. This effect is not statistically significant at even 10% significance level. Whereas for Texas, the partial effect of `cases_avg_per_100k` is 0.2228197 that means if the `cases_avg_per_100k` increases by a unit, the arrival delay will increase by 0.2228197. This effect is statistically significant at even 0.1% significance level and is significantly higher compared to California.
 
 ## Delay - Zero-Inflated Poisson Regression
 
@@ -322,7 +329,7 @@ zipTexas_pred = predict(zipTexas, type="response", data = airport_covid_Texas_te
 #sqrt(mean((airport_covid_Texas_test$ARR_DELAY_NEW %>% na.omit - zipCalifornia_pred)^2))
 ```
 
-Next, we used zero inflated poisson regression to see the effect of covid cases on the arrival delay. In both California and Texas the effect of `cases_avg_per_100k` is small and positive but statistically significant. The RMSE in the case of California is 33.72181 and Texas is 31.96069.
+Next, we used zero inflated poisson regression to see the effect of covid cases on the arrival delay. In both California and Texas the effect of `cases_avg_per_100k` is small and positive but statistically significant at 0.1%. The RMSE in the case of California is 33.72181 and Texas is 31.96069.
 
 ## Delay - Tree Model
 
@@ -366,8 +373,16 @@ airport_covid_delayed_Texas_train = training(airport_covid_delayed_Texas_split)
 airport_covid_delayed_Texas_test = testing(airport_covid_delayed_Texas_split)
 ```
 
-<center> Figure 4: Variable Importance Plot and Partial Dependance Plot for RandomForest model 
-predicting Arrival Delay in California and Texas </center>
+```{=latex}
+\begin{center}
+\textbf{\textsf{\large Figure 4: Variable Importance Plot and Partial Dependance Plot for RandomForest model
+predicting Arrival Delay in California and Texas}}
+\end{center}
+```
+
+```{=latex}
+\begin{center}
+```
 
 ```{r rf-delaytime, results = FALSE}
 #random forest model
@@ -395,12 +410,41 @@ partialPlot(rfTexas_delayed, airport_covid_delayed_Texas_test, 'cases_avg_per_10
             main = "Partial Dependence, Texas")
 ```
 
+```{=latex}
+\end{center}
+```
+
 Figure 4 shows the Variable Importance Graph and Partial Dependence Graph for the random forest model.
 Random Forest model for the data with the delayed flights shows that for both California and Texas the `cases_avg_per_100k` is the third most important variable ahead of the `month`. Partial Dependence graph on `cases_avg_per_100k` for California seems to suggest that the delays exponentially increase from 65 mins to 85 mins when the `cases_avg_per_100k` reached 15. But in the case of Texas the range is smaller and the delays fluctuating between 54 and 64 mins. The out of sample RMSE value for California is 93.58049 and for Texas is 81.30241. This suggests that the randomForest model worked better with the Texas state data.
 
 # Conclusion
 
+We have looked at various models to see the relationships between the COVID-19 cases and delays or cancellations of flights departing from Californina or Texas.
+The findings from our models are as follows. First, we ran the logit model on delay rates. The overall out-of-sample accuracy was pretty high in both states' models, 
+around 90%. It turned out that the effect of the number of COVID cases on delay rates was positive and not statistically significant at 10% level in California. 
+In Texas, the effect was positive and statistically significant at even 0.1%. 
+This says that the COVID-19 cases were positively correlated with the flight delays. We wonder why the effect was not significant 
+in California but very significant in Texas. 
+For cancellation rates, we used logit and tree models. The logit model for cancellation rates also had high out-of-sample accuracy 
+of around 89%. It suggested the positive relationships between the COVID cases and cancellation rates, statistically significant at 
+0.1% in both states. These are very strong results.
+
+Next, we looked at delay in minutes. From the linear regression model, it suggested that one more seven-day average case per 100,000
+people would bring 0.0925041 more minutes and 0.0925041 minutes in California and Texas, respectively. Again, it was not statistically significant at 10% level for California and statistically significant at 0.01% level for Texas. Zero-Inflated Poisson Regression also suggests positive relationship between the COVID cases and the coefficients were statistically significant at 10%.
+The tree models for delay minutes used COVID case numbers as a decision making standard. The variable importance plot implied that 
+the number of COVID cases was an important variable in both states. It was relatively less important compared to other variables in California than Texas.
+
+A further analysis on the delayed flight showed the positive relationship between COVID case numbers and the time the flights were
+delayed for. The variable importance was pretty high in both states. Looking at partial dependence, the partial dependence in California was larger than the one in Texas.
+From our analysis, we conclude that the COVID-19 cases have positive correlation with the rate of flight delay and cancellation, as well as the amount of delay.
+
 # Appendix
+
+```{=latex}
+\begin{center}
+\textbf{\textsf{\large Table A1: Airline Carrier Codes}}
+\end{center}
+```
 
 |Code|   Airline Name     |
 |----|--------------------| 
@@ -415,13 +459,30 @@ Random Forest model for the data with the delayed flights shows that for both Ca
 | UA | United Airlines    |
 | WN | Southwest Airlines |
 
+```{=latex}
+\vspace{.5in}
+\begin{center}
+```
+
 ```{r}
 #cancellation trees
 rpart.plot(california.tree.cancel, type=4, main="Figure A1: Tree model for Cancellation of Flights in California")
 ```
 
+```{=latex}
+\end{center}
+\vspace{.5in}
+\begin{center}
+```
+
 ```{r}
 rpart.plot(texas.tree.cancel, type=4, main="Figure A2: Tree model for Cancellation of Flights in Texas")
+```
+
+```{=latex}
+\end{center}
+\vspace{.5in}
+\begin{center}
 ```
 
 ```{r}
@@ -429,6 +490,17 @@ rpart.plot(texas.tree.cancel, type=4, main="Figure A2: Tree model for Cancellati
 rpart.plot(california.tree, type=4, main="Figure A3: Tree model for Delay of Flights in California")
 ```
 
+```{=latex}
+\end{center}
+\vspace{.5in}
+\begin{center}
+```
+
 ```{r}
 rpart.plot(texas.tree, type=4, main="Figure A4: Tree model of Delay of Flights in Texass")
 ```
+
+```{=latex}
+\end{center}
+```
+
