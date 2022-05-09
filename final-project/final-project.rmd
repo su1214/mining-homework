@@ -5,8 +5,8 @@ date: ""
 output:
   pdf_document:
     latex_engine: xelatex
-    fig_width : 6.5
-    fig_height: 4
+    fig_width : 5.5
+    fig_height: 3
 header-includes:
    - \usepackage{setspace}
    - \setstretch{1.2}
@@ -357,7 +357,7 @@ airport_covid_delayed_Texas_train = training(airport_covid_delayed_Texas_split)
 airport_covid_delayed_Texas_test = testing(airport_covid_delayed_Texas_split)
 ```
 
-```{r rf-delaytime}
+```{r rf-delaytime, results = FALSE}
 #random forest model
 ## California
 rfCalifornia_delayed = randomForest(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK + 
@@ -376,7 +376,9 @@ rfTexas_delayed = randomForest(ARR_DELAY_NEW ~ MONTH + DAY_OF_WEEK +
 #rmse(rfTexas_delayed, data=airport_covid_delayed_Texas_test)
 varimpTX = varImpPlot(rfTexas_delayed, type=1)
 partialTX = partialPlot(rfTexas_delayed, airport_covid_delayed_Texas_test, 'cases_avg_per_100k')
+```
 
+```{r partialplot}
 partialCA
 partialTX
 varimpCA
